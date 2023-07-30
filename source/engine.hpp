@@ -49,6 +49,34 @@ enum state {
 	s_gameover = 5,
 };
 
+#define BG (Color){ 40, 40, 40, 255 }
+#define FG (Color){ 235, 219, 178, 255 }
+
+#define N_BUTTON_STARTUI	3
+#define N_BUTTON_SETTINGUI	4
+
+typedef struct s_Attribut {
+	float	speed;
+	int		damage;
+	int		life;
+	int		armor;
+	int		max_life;
+	int		max_armor;
+	int		stamina;
+	int		max_speed;
+	int		weapon_masteries;
+	int		agility;
+	int		classes;
+	float	life_regen;
+}	Attribut;
+
+typedef struct s_Button {
+	Rectangle	bound;
+	Texture2D	text;
+	Vector2		pos;
+	std::string	name;
+}	Button;
+
 typedef struct s_FadeTxt {
 	std::string	fmt;
 	Color		color;
@@ -71,6 +99,25 @@ typedef struct s_LootTable {
 	std::vector<float>	drop_rate;
 	u32	size;
 }	LootTable;
+
+typedef struct s_entity {
+	u32				id;
+	char			*name;
+	u32				loot_index;
+	u32				text_index;
+	Vector2			pos;
+	Vector2			toPos;
+	Attribut		attribut;
+}	t_entity;
+
+typedef struct s_spawn_entity{
+	int			radius;
+	Vector2		pos;
+	u32			loot_index;
+	u32			text_index;
+	u32			number_left;
+	Attribut	attribut;
+}	EntitySpawn;
 
 /*
 	find the greatest common denominator between to signed integer
@@ -176,6 +223,8 @@ Vector2	worldPosToScreenPos(Vector2 world_pos, Vector2 camera_target, int s_widt
 	return (screen_pos);
 }
 
+namespace engine {
+
 class FileMgr {
 	private:
 	public:
@@ -213,5 +262,41 @@ class FileMgr {
 	~FileMgr() {
 	}
 };
+
+class Rendering {
+
+private:
+
+	std::vector<s_FadeTxt>	Fadetxt_list;
+
+public:
+
+	void	addFadingTxt(std::string text, double delay, Color color, int font_size, Vector2 pos) {
+		Fadetxt_list.push_back({
+			.color = color,
+			.pos = pos,
+			.delay = delay,
+			.time = 0.0f,
+			.alpha = 1.0f,
+			.font_size = font_size,
+		});
+	}
+	void	renderFadingTxt(double delta_time) {
+		for (i32 i = 0; i < Fadetxt_list.size(); i++) {
+			if (Fadetxt_list.at(i).time >= Fadetxt_list.at(i).delay || Fadetxt_list.at(i).fmt.empty()) {
+				Fadetxt_list.erase(Fadetxt_list.begin() + i);
+			}
+			Fadetxt_list.at(i).alpha = ((Fadetxt_list.at(i).delay - Fadetxt_list.at(i).time) / Fadetxt_list.at(i).delay);
+			DrawText(Fadetxt_list.at(i).fmt.c_str(), Fadetxt_list.at(i).pos.x, Fadetxt_list.at(i).pos.y, Fadetxt_list.at(i).font_size, Fade(Fadetxt_list.at(i).color, Fadetxt_list.at(i).alpha));
+			Fadetxt_list.at(i).time += delta_time;
+		}
+	}
+	Rendering(void) {
+	}
+	~Rendering(void) {
+	}
+};
+
+}
 
 #endif

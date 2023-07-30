@@ -27,7 +27,7 @@ ifeq ($(shell uname -s), Linux)
 LIBS		=	-lraylib -lGL -lm -lpthread -ldl -lrt -lX11 lstdc++
 endif
 
-$(NAME)		:	$(OBJ)
+$(BUILDDIR)$(NAME)		:	$(OBJ)
 		mkdir -p $(BUILDDIR)
 		$(CC) $(OBJ) ${LIBS} -g -o $@
 
@@ -42,13 +42,13 @@ $(SERVER_NAME)	:	$(OBJ)
 $(SERVER_OBJ)	:	%.o	:	%.cpp
 		$(CC) $(CFLAGS) ${INCLUDE} -c $< -o $@
 
-all		:	$(NAME)
+all		:	$(BUILDDIR)$(NAME)
 
 clean		:
-		rm $(OBJ)
+		rm -rf $(OBJ)
 
 fclean		:	clean
-		rm $(NAME).exe
+		rm -rf $(BUILDDIR)
 
 re		:	fclean all
 

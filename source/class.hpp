@@ -3,7 +3,7 @@
 
 # include "engine.hpp"
 
-namespace engine {
+namespace Game {
 
 class Loot {
 
@@ -54,55 +54,73 @@ class Player {
 
 private:
 
-	Camera3D	cam;
-	Vector3		pos;
-
 public:
+	Vector2		pos;
+	Camera2D	cam;
+	Attribut	attribut;
+	Vector2		topos;
+	Rectangle	bound;
+	float		angle;
+	Vector2		origin;
+	Rectangle	recsource;
+	Vector2		vel;
 
-	void	update(double delta_time, std::vector<i32> input_buffer) {
-		(void)delta_time;
-		(void)input_buffer;
+	int	update(double delta_time, std::vector<i32> input_buffer, int *state, engine::Rendering *render) {
+		static double acc_time;
+		if (flDistance(pos, topos) > 0.01f) {
+			pos = toTravel(pos, topos, attribut.speed * delta_time, delta_time);
+		}
+		bound.x = pos.x;
+		bound.y = pos.y;
+		if (attribut.life < 0) {
+			attribut.life = 0;
+			*state = s_gameover;
+		}
+		if (attribut.life > attribut.max_life) {
+			attribut.life = attribut.max_life; 
+		}
+		if (acc_time >= 1) {
+			if (attribut.life < attribut.max_life) {
+				attribut.life += attribut.life_regen;
+				render->addFadingTxt(std::to_string(attribut.life_regen).c_str(), 0.4f, GREEN, 12, pos);
+			}
+		}
+		acc_time += delta_time;
 	}
 	Player(void) {
-		cam = (Camera3D){
-			.position =  {0, 0, 0},
-			.target = {},
-			.up = {},
-			.fovy = 70,
-			.projection = {},
+		pos = {
+			.x = 60,
+			.y = 60
 		};
-		pos = {0, 0, 0};
+		vel = {
+			.x = 0,
+			.y = 0
+		};
+		topos = {
+			.x = 60,
+			.y = 60
+		};
+		cam = (Camera2D){
+			.target = {
+		 		.x = 60,
+				.y = 60,
+			},
+			.rotation = 0,
+			.zoom = 1.0f,
+		};
+		bound = { 0, 0, 64, 64};
+		attribut = {
+			.speed = 20000.0f,
+			.max_life = 1500,
+			.life_regen = 12.0f,
+		};
+		origin = { 32, 32};
+		recsource = { 0, 0, 64, 64};
 	}
 	~Player(void) {
 
 	}
 };
-
-
-typedef struct s_entity {
-	u32				id;
-	char			*name;
-	u32				loot_index;
-	u32				text_index;
-	Vector2			pos;
-	Vector2			toPos;
-	float			speed;
-	int				damage;
-	int				life;
-	int				armor;
-}	t_entity;
-
-typedef struct s_spawn_entity{
-	int			radius;
-	Vector2		pos;
-	u32			loot_index;
-	u32			text_index;
-	u32			number_left;
-	float		speed;
-	int			damage;
-	int			life;
-	int			armor;
-}	EntitySpawn;
 
 class Entity {
 
@@ -135,52 +153,18 @@ public:
 	}
 };
 
-class Render {
-
-private:
-
-	std::vector<s_FadeTxt>	Fadetxt_list;
-
-public:
-
-	void	addFadingTxt(std::string text, double delay, Color color, int font_size, Vector2 pos) {
-		Fadetxt_list.push_back({
-			.color = color,
-			.pos = pos,
-			.delay = delay,
-			.time = 0.0f,
-			.alpha = 1.0f,
-			.font_size = font_size,
-		});
-	}
-	void	renderFadingTxt(double delta_time) {
-		for (i32 i = 0; i < Fadetxt_list.size(); i++) {
-			if (Fadetxt_list.at(i).time >= Fadetxt_list.at(i).delay || Fadetxt_list.at(i).fmt.empty()) {
-				Fadetxt_list.erase(Fadetxt_list.begin() + i);
-			}
-			Fadetxt_list.at(i).alpha = ((Fadetxt_list.at(i).delay - Fadetxt_list.at(i).time) / Fadetxt_list.at(i).delay);
-			DrawText(Fadetxt_list.at(i).fmt.c_str(), Fadetxt_list.at(i).pos.x, Fadetxt_list.at(i).pos.y, Fadetxt_list.at(i).font_size, Fade(Fadetxt_list.at(i).color, Fadetxt_list.at(i).alpha));
-			Fadetxt_list.at(i).time += delta_time;
-		}
-	}
-
-	void	render(void *scene, double delta_time) {
-		BeginDrawing();
-		renderFadingTxt(delta_time);
-		EndDrawing();
-	}
-	Render(void) {
-	}
-	~Render(void) {
-	}
-};
-
 class Context {
 
 private:
 
-	const char		*title = "noHeaven";
-	int				width = 0, height = 0;
+	const char				*title = "noHeaven";
+	int						width, height;
+	int						state;
+	engine::Rendering		render;
+	Font					font;
+	Player					player;
+	std::vector<Texture>	textAtlas;
+	std::vector<i32>		input_buffer;
 
 	void	LoadTextureAtlas() {
 		textAtlas.push_back(LoadTexture("asset/texture/button.png"));
@@ -196,23 +180,296 @@ private:
 
 public:
 
-	Font font;
-	std::vector<Texture>	textAtlas;
-	std::vector<i32>		input_buffer;
-
 	bool IsMouseInBound(Rectangle rec, Vector2 pos, Vector2 mouse_pos) {
 		return (mouse_pos.x >= pos.x && mouse_pos.x <= pos.x + rec.width
 			&& mouse_pos.y >= pos.y && mouse_pos.y <= pos.y + rec.height);
 	}
-	void	input(void) {
 
+	void	gameInput(void) {
+		if (IsMouseButtonPressed(MOUSE_RIGHT_BUTTON) || IsMouseButtonDown(MOUSE_RIGHT_BUTTON)) {
+			player.topos = screenPosToWorldPos(GetMousePosition(), player.cam.target, width, height, player.cam.zoom);
+			//should move this line after pathfinding find next point and not here
+			player.angle = atan2(player.topos.y - player.pos.y, player.topos.x - player.pos.x) * 180 * Q_rsqrt(PI * PI);
+		}
+		player.cam.zoom += ((float)GetMouseWheelMove() * 0.05f);
+		Vector2 mouse_pos = GetMousePosition();
+		if (IsMouseInBound((Rectangle){0, 0, static_cast<float>(width), static_cast<float>(height)}, (Vector2){ 0, 0}, mouse_pos)) {
+			if (mouse_pos.x <= 0) {
+				mouse_pos.x = 1;
+			} else if (mouse_pos.x >= width) {
+				mouse_pos.x = width - 1;
+			}
+			if (mouse_pos.y <= 0) {
+				mouse_pos.y = 1;
+			} else if (mouse_pos.y >= height) {
+				mouse_pos.y = height - 1;
+			}
+			SetMousePosition(mouse_pos.x, mouse_pos.y);
+		}
+		if (IsMouseInBound((Rectangle){0, 0, static_cast<float>(width), 20}, (Vector2){ 0, 0}, mouse_pos)) {
+			player.cam.target.y--;
+		}
+		if (IsMouseInBound((Rectangle){0, 0, 20, static_cast<float>(height)}, (Vector2){ 0, 0}, mouse_pos)) {
+			player.cam.target.x--;
+		}
+		if (IsMouseInBound((Rectangle){0, 0, static_cast<float>(width), 20}, (Vector2){ 0, static_cast<float>(height - 20)}, mouse_pos)) {
+			player.cam.target.y++;
+		}
+		if (IsMouseInBound((Rectangle){0, 0, 20, static_cast<float>(height)}, (Vector2){ static_cast<float>(width - 20), 0}, mouse_pos)) {
+			player.cam.target.x++;
+		}
+		if (player.cam.zoom > 2.0f) {
+			player.cam.zoom = 2.0f;
+		} else if (player.cam.zoom < 0.7f) {
+			player.cam.zoom = 0.7f;
+		}
+		switch (GetKeyPressed()) {
+			//spellone
+			case (KEY_Q):
+				player.attribut.life -= 100;
+				break;
+			case (KEY_W):
+			//spelltwo
+				break;
+			//spellthree
+			case (KEY_E):
+				break;
+			//spellfour
+			case (KEY_R):
+				break;
+			//interact
+			case (KEY_T):
+				break;
+			//warp or dash or leap
+			case (KEY_F):
+				break;
+			//center camera or jump (jump if iso or 3d game)
+			case (KEY_SPACE):
+				player.cam.target = player.pos;
+				break;
+			//openmenu
+			case (KEY_ESCAPE):
+				state = s_menu;
+				break;
+			default:
+				break;
+		}
+		if (IsKeyDown(KEY_SPACE)) {
+			player.cam.target = player.pos;
+		}
+	}
+
+	void	MenuStart(double delta_time) {
+		static bool window_close = false;
+		static Button button[N_BUTTON_STARTUI] = {
+			{
+				.bound = {
+					0, 0, 64, 32
+				},
+				.text = {0},//LoadTexture("./asset/button.png"),
+				.pos = { 20, 50},
+				.name = "play",	
+			},
+			{
+				.bound = {
+					0, 0, 64, 32
+				},
+				.text = {0},//LoadTexture("./asset/button.png"),
+				.pos = { 104, 50},
+				.name = "setting",
+			},
+			{
+				.bound = {
+					0, 0, 64, 32
+				},
+				.text = {0},//LoadTexture("./asset/button.png"),
+				.pos = { 188, 50},
+				.name = "leave",
+			}
+		};
+
+		Vector2 mouse_pos = GetMousePosition();
+
+		if (window_close == true) {
+			if (IsKeyPressed(KEY_Y)) {
+				state = s_close;
+			}
+			else if (IsKeyPressed(KEY_N)) {
+				window_close = false;
+			}
+		}
+		if (IsKeyPressed(KEY_ESCAPE)) {
+			window_close = true;
+		}
+		int i = 0;
+		if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+			while (i < N_BUTTON_STARTUI && !IsMouseInBound(button[i].bound, button[i].pos, mouse_pos)) {
+				i++;
+			}
+			switch(i) {
+				case (0):
+					state = s_game;
+					break;
+				case (1):
+					state = s_setting;
+					break;
+				case (2):
+					window_close = true;
+					break;
+				default:
+					break;
+			}
+		}
+		BeginDrawing();
+		ClearBackground(FG);
+		//render ui element here
+		for (int k = 0; k < N_BUTTON_STARTUI; k++) {
+			DrawTextureRec(textAtlas[0], button[k].bound, button[k].pos, WHITE);
+			DrawTextEx(font, button[k].name.c_str(), (Vector2){ button[k].pos.x + 10, static_cast<float>(button[k].pos.y + button[k].bound.height * 0.5 - 6)}, 22, 0, FG);
+		}
+		DrawText("Menu", 0, 0, 25, BG);
+		if (window_close == true) {
+			DrawRectangle(0, height * 0.5 - 100, width, 200, BG);
+			DrawTextEx(font, "Are you sure you want to exit program? [Y/N]", (Vector2){40, static_cast<float>(height * 0.5 - 20)}, 24, 0, FG);
+		}
+		for (int k = 0; k < N_BUTTON_STARTUI; k++) {
+			if (IsMouseInBound(button[k].bound, button[k].pos, mouse_pos)) {		
+				DrawTextureRec(textAtlas[1], button[k].bound, button[k].pos, WHITE);
+			}
+		}
+		EndDrawing();
+	}
+
+	void	MenuSetting(double delta_time) {
+		static Button button[N_BUTTON_SETTINGUI] = {
+		{
+			.bound = {
+				0, 0, 64, 32
+			},
+			.text = {0},//LoadTexture("./asset/button.png"),
+			.pos = { 64, 50},
+			.name = "Video",	
+			},
+		{
+			.bound = {
+				0, 0, 64, 32
+			},
+			.text = {0},//LoadTexture("./asset/button.png"),
+			.pos = { 64, 100},
+			.name = "Game",
+			},
+		{
+			.bound = {
+				0, 0, 64, 32
+			},
+			.text = {0},//LoadTexture("./asset/button.png"),
+			.pos = { 64, 150},
+			.name = "Input",
+			},
+		{
+			.bound = {
+				0, 0, 64, 32
+			},
+			.text = {0},//LoadTexture("./asset/button.png"),
+			.pos = { 64, 200},
+			.name = "back",
+			}
+		};
+
+		Vector2 mouse_pos = GetMousePosition();
+
+		if (IsKeyPressed(KEY_ESCAPE)) {
+			state = s_menu; 
+		}
+		int i = 0;
+		if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+			while (i < N_BUTTON_SETTINGUI && !IsMouseInBound(button[i].bound, button[i].pos, mouse_pos)) {
+				i++;
+			}
+			switch(i) {
+				case (0):
+					break;
+				case (1):
+					break;
+				case (2):
+					break;
+				case (3):
+					state = s_menu;
+					break;
+				default:
+					break;
+			}
+		}
+		BeginDrawing();
+		ClearBackground(FG);	
+		DrawText("Setting", 20, 20, 30, BG);
+		for (int k = 0; k < N_BUTTON_SETTINGUI; k++) {
+			DrawTextureRec(textAtlas[0], button[k].bound, button[k].pos, WHITE);
+			DrawTextEx(font, button[k].name.c_str(), (Vector2){ button[k].pos.x + 10, static_cast<float>(button[k].pos.y + button[k].bound.height * 0.5 - 6)}, 22, 0, FG);
+		}
+		for (int k = 0; k < N_BUTTON_SETTINGUI; k++) {
+			if (IsMouseInBound(button[k].bound, button[k].pos, mouse_pos)) {		
+				DrawTextureRec(textAtlas[1], button[k].bound, button[k].pos, WHITE);
+			}
+		}
+		EndDrawing();
+	}
+
+	void	Game(double delta_time) {
+		gameInput();
+		player.update(delta_time, input_buffer, &state, &render);
+		//updateEntity(ctx);
+		BeginDrawing();
+		ClearBackground(BLACK);
+		BeginMode2D(player.cam);
+		//for (int i = 0; i < STAGE_SIZE; i++) {
+		//	DrawTextureRec(ctx->stage[i].text, ctx->stage[i].rec, ctx->stage[i].pos, ctx->stage[i].tint);
+		//}
+		DrawTexturePro(textAtlas[2], player.recsource, player.bound,
+			player.origin, player.angle + 90,WHITE);
+		DrawLine(player.pos.x, player.pos.y,
+			player.topos.x, player.topos.y, RED);
+		render.renderFadingTxt(delta_time);
+		EndMode2D();
+		DrawRectangle(width * 0.5 - 100, height - 60, 200, 20, RED);
+		DrawRectangle(width * 0.5 - 100, height - 60, player.attribut.life * 200 / player.attribut.max_life, 20, GREEN);
+		DrawText(TextFormat("%.0f/%d", player.attribut.life, player.attribut.max_life), width * 0.5 - 50, height - 60, 20, BLACK);
+		EndDrawing();
+	}
+
+	void	loop() {
+		while(state != s_close) {
+			double delta_time = GetFrameTime();
+			switch (state){
+			case (s_menu):
+				MenuStart(delta_time);
+				break;
+			case (s_game):
+				Game(delta_time);
+				break;
+			case (s_setting):
+				MenuSetting(delta_time);
+				break;
+			case (s_pause):
+				break;
+			default:
+				state = s_close;
+				break;
+		}
+		}
 	}
 	Context() {
 		width = 600, height = 400;
+		state = s_menu;
 		InitWindow(width, height, title);
 		font = LoadFont("asset/font/SF_Atarian_System.ttf");
 		SetTextureFilter(font.texture, TEXTURE_FILTER_TRILINEAR);
 		LoadTextureAtlas();
+		player.cam.offset.x = width * 0.5;
+		player.cam.offset.y = height * 0.5;
+		player.attribut.life = player.attribut.max_life;
+		render = engine::Rendering();
+		player = Player();
 	}
 	~Context(void) {
 		UnloadFont(font);
