@@ -6,19 +6,20 @@ BUILDDIR	=	build/
 
 CC			=	gcc
 
-CFLAGS		=	-Wall -Wextra -pedantic #-std=c++98 -O3
+CFLAGS		=	-Wall -Wextra -pedantic -std=c++98 -O3 -fsanitize=leak
 
 OBJ		=	$(SRC:%.cpp=%.o)
 
 SERVER_OBJ	=	$(SERVER_SRC:%.cpp=%.o)
 
 SRC		+=	source/engine.cpp
+SRC		+=	source/math.cpp
 
 SERVER_SRC	+=	source/server.cpp
 
 #$(wildcard ./source/*.cpp)
 
-INCLUDE		=	-I C:/mingw64/include #-I C:/Users/emilia/Desktop/fat_std/include
+INCLUDE		=	-I C:/mingw64/include
 
 ifeq ($(OS), Windows_NT)
 LIBS		=	-lraylib -lopengl32 -lgdi32 -lwinmm -lstdc++
@@ -34,7 +35,7 @@ $(BUILDDIR)$(NAME)		:	$(OBJ)
 #add this above after lib to have no console: <-mwindows -Wl,--subsystem,windows>
 
 $(OBJ)		:	%.o	:	%.cpp
-		$(CC) $(CFLAGS) ${INCLUDE} -c $< -o $@
+		$(CC) $(CFLAGS) ${INCLUDE} -g -c $< -o $@
 
 $(SERVER_NAME)	:	$(OBJ)
 		$(CC) $(SERVER_OBJ) ${SERVER_LIBS} -o $@

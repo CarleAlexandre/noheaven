@@ -15,3 +15,8 @@ This is the c++ version of no heaven, for now i will focus on the actual gamepla
 - INDUSTRIE
 - AUTOMATISME
 - CENTRALE MARKET AND GLOBAL ECONOMY
+
+
+for item and texture atlas, it should be read and loaded after launch, player could then add items and texture on the fly
+and map too;
+i should also do the serialization of file for the engine

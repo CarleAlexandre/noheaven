@@ -46,8 +46,47 @@ public:
 	}
 };
 
-class GameMap {
+class Inventory {
+	private:
+	std::vector<InvPanel>	inventory;
+	u32						size;
+	public:
 
+	i32	add_item(u32 item_id, u32 number, std::vector<s_Item> *item_list) {
+		if (inventory.size() >= size) {
+			//cannot add the items;
+			return (-1);
+		}
+		for (i32 i = 0; i < inventory.size(); i++) {
+			if (inventory.at(i).id == item_id) {
+				inventory.at(i).stack_size += number;
+				return (0);
+			}
+		}
+		inventory.push_back(InvPanel{item_id, number});
+		return (0);
+	}
+
+	void	delete_item(u32 index) {
+		inventory.erase(inventory.begin() + index);
+	}
+
+	void	expend_inventory(u32 added_size) {
+		size += added_size;
+	}
+
+	Inventory() {
+
+	}
+
+	~Inventory() {
+
+	}
+};
+
+class GameMap {
+	//list of element
+	std::vector<int> background;
 };
 
 class Player {
@@ -65,8 +104,8 @@ public:
 	Rectangle	recsource;
 	Vector2		vel;
 
-	int	update(double delta_time, std::vector<i32> input_buffer, int *state, engine::Rendering *render) {
-		static double acc_time;
+	void	update(double delta_time, std::vector<i32> input_buffer, int *state, std::vector<s_FadeTxt> *Fadetxt_list) {
+		static double acc_time = 0;
 		if (flDistance(pos, topos) > 0.01f) {
 			pos = toTravel(pos, topos, attribut.speed * delta_time, delta_time);
 		}
@@ -82,8 +121,9 @@ public:
 		if (acc_time >= 1) {
 			if (attribut.life < attribut.max_life) {
 				attribut.life += attribut.life_regen;
-				render->addFadingTxt(std::to_string(attribut.life_regen).c_str(), 0.4f, GREEN, 12, pos);
+				addFadingTxt(TextFormat("+%.0f", attribut.life_regen), 0.8f, GREEN, 12, pos, Fadetxt_list);
 			}
+			acc_time = 0;
 		}
 		acc_time += delta_time;
 	}
@@ -111,11 +151,14 @@ public:
 		bound = { 0, 0, 64, 64};
 		attribut = {
 			.speed = 20000.0f,
+			.life = 1500,
 			.max_life = 1500,
 			.life_regen = 12.0f,
 		};
 		origin = { 32, 32};
 		recsource = { 0, 0, 64, 64};
+		cam.offset.x = 360;
+		cam.offset.y = 240;
 	}
 	~Player(void) {
 
@@ -158,40 +201,41 @@ class Context {
 private:
 
 	const char				*title = "noHeaven";
-	int						width, height;
-	int						state;
-	engine::Rendering		render;
+	int						width = 720, height = 480;
+	int						state = s_menu;
 	Font					font;
-	Player					player;
-	std::vector<Texture>	textAtlas;
-	std::vector<i32>		input_buffer;
 
 	void	LoadTextureAtlas() {
-		textAtlas.push_back(LoadTexture("asset/texture/button.png"));
-		textAtlas.push_back(LoadTexture("asset/texture/highlight.png"));
-		textAtlas.push_back(LoadTexture("asset/texture/character.png"));
+		textAtlas->push_back(LoadTexture("asset/texture/button.png"));
+		textAtlas->push_back(LoadTexture("asset/texture/highlight.png"));
+		textAtlas->push_back(LoadTexture("asset/texture/character.png"));
 	}
 
 	void	UnloadTextureAtlas() {
-		for (int i = 0; i < textAtlas.size(); i++) {
-			UnloadTexture(textAtlas[i]);
+		for (int i = 0; i < textAtlas->size(); i++) {
+			UnloadTexture(textAtlas->at(i));
 		}
 	}
 
 public:
+
+	std::vector<Texture>	*textAtlas;
+	std::vector<i32>		input_buffer;
+	std::vector<FadeTxt>	Fadetxt_list;
+	std::vector<Item>		*itemsAtlas;
 
 	bool IsMouseInBound(Rectangle rec, Vector2 pos, Vector2 mouse_pos) {
 		return (mouse_pos.x >= pos.x && mouse_pos.x <= pos.x + rec.width
 			&& mouse_pos.y >= pos.y && mouse_pos.y <= pos.y + rec.height);
 	}
 
-	void	gameInput(void) {
+	void	gameInput(Player *player) {
 		if (IsMouseButtonPressed(MOUSE_RIGHT_BUTTON) || IsMouseButtonDown(MOUSE_RIGHT_BUTTON)) {
-			player.topos = screenPosToWorldPos(GetMousePosition(), player.cam.target, width, height, player.cam.zoom);
+			player->topos = screenPosToWorldPos(GetMousePosition(), player->cam.target, width, height, player->cam.zoom);
 			//should move this line after pathfinding find next point and not here
-			player.angle = atan2(player.topos.y - player.pos.y, player.topos.x - player.pos.x) * 180 * Q_rsqrt(PI * PI);
+			player->angle = atan2(player->topos.y - player->pos.y, player->topos.x - player->pos.x) * 180 * Q_rsqrt(PI * PI);
 		}
-		player.cam.zoom += ((float)GetMouseWheelMove() * 0.05f);
+		player->cam.zoom += ((float)GetMouseWheelMove() * 0.05f);
 		Vector2 mouse_pos = GetMousePosition();
 		if (IsMouseInBound((Rectangle){0, 0, static_cast<float>(width), static_cast<float>(height)}, (Vector2){ 0, 0}, mouse_pos)) {
 			if (mouse_pos.x <= 0) {
@@ -207,26 +251,26 @@ public:
 			SetMousePosition(mouse_pos.x, mouse_pos.y);
 		}
 		if (IsMouseInBound((Rectangle){0, 0, static_cast<float>(width), 20}, (Vector2){ 0, 0}, mouse_pos)) {
-			player.cam.target.y--;
+			player->cam.target.y--;
 		}
 		if (IsMouseInBound((Rectangle){0, 0, 20, static_cast<float>(height)}, (Vector2){ 0, 0}, mouse_pos)) {
-			player.cam.target.x--;
+			player->cam.target.x--;
 		}
 		if (IsMouseInBound((Rectangle){0, 0, static_cast<float>(width), 20}, (Vector2){ 0, static_cast<float>(height - 20)}, mouse_pos)) {
-			player.cam.target.y++;
+			player->cam.target.y++;
 		}
 		if (IsMouseInBound((Rectangle){0, 0, 20, static_cast<float>(height)}, (Vector2){ static_cast<float>(width - 20), 0}, mouse_pos)) {
-			player.cam.target.x++;
+			player->cam.target.x++;
 		}
-		if (player.cam.zoom > 2.0f) {
-			player.cam.zoom = 2.0f;
-		} else if (player.cam.zoom < 0.7f) {
-			player.cam.zoom = 0.7f;
+		if (player->cam.zoom > 2.0f) {
+			player->cam.zoom = 2.0f;
+		} else if (player->cam.zoom < 0.7f) {
+			player->cam.zoom = 0.7f;
 		}
 		switch (GetKeyPressed()) {
 			//spellone
 			case (KEY_Q):
-				player.attribut.life -= 100;
+				player->attribut.life -= 100;
 				break;
 			case (KEY_W):
 			//spelltwo
@@ -245,7 +289,7 @@ public:
 				break;
 			//center camera or jump (jump if iso or 3d game)
 			case (KEY_SPACE):
-				player.cam.target = player.pos;
+				player->cam.target = player->pos;
 				break;
 			//openmenu
 			case (KEY_ESCAPE):
@@ -255,7 +299,7 @@ public:
 				break;
 		}
 		if (IsKeyDown(KEY_SPACE)) {
-			player.cam.target = player.pos;
+			player->cam.target = player->pos;
 		}
 	}
 
@@ -324,7 +368,7 @@ public:
 		ClearBackground(FG);
 		//render ui element here
 		for (int k = 0; k < N_BUTTON_STARTUI; k++) {
-			DrawTextureRec(textAtlas[0], button[k].bound, button[k].pos, WHITE);
+			DrawTextureRec(textAtlas->at(0), button[k].bound, button[k].pos, WHITE);
 			DrawTextEx(font, button[k].name.c_str(), (Vector2){ button[k].pos.x + 10, static_cast<float>(button[k].pos.y + button[k].bound.height * 0.5 - 6)}, 22, 0, FG);
 		}
 		DrawText("Menu", 0, 0, 25, BG);
@@ -334,7 +378,7 @@ public:
 		}
 		for (int k = 0; k < N_BUTTON_STARTUI; k++) {
 			if (IsMouseInBound(button[k].bound, button[k].pos, mouse_pos)) {		
-				DrawTextureRec(textAtlas[1], button[k].bound, button[k].pos, WHITE);
+				DrawTextureRec(textAtlas->at(1), button[k].bound, button[k].pos, WHITE);
 			}
 		}
 		EndDrawing();
@@ -404,40 +448,41 @@ public:
 		ClearBackground(FG);	
 		DrawText("Setting", 20, 20, 30, BG);
 		for (int k = 0; k < N_BUTTON_SETTINGUI; k++) {
-			DrawTextureRec(textAtlas[0], button[k].bound, button[k].pos, WHITE);
+			DrawTextureRec(textAtlas->at(0), button[k].bound, button[k].pos, WHITE);
 			DrawTextEx(font, button[k].name.c_str(), (Vector2){ button[k].pos.x + 10, static_cast<float>(button[k].pos.y + button[k].bound.height * 0.5 - 6)}, 22, 0, FG);
 		}
 		for (int k = 0; k < N_BUTTON_SETTINGUI; k++) {
 			if (IsMouseInBound(button[k].bound, button[k].pos, mouse_pos)) {		
-				DrawTextureRec(textAtlas[1], button[k].bound, button[k].pos, WHITE);
+				DrawTextureRec(textAtlas->at(1), button[k].bound, button[k].pos, WHITE);
 			}
 		}
 		EndDrawing();
 	}
 
-	void	Game(double delta_time) {
-		gameInput();
-		player.update(delta_time, input_buffer, &state, &render);
+	void	Game(double delta_time, Player *player) {
+		gameInput(player);
+		player->update(delta_time, input_buffer, &state, &Fadetxt_list);
 		//updateEntity(ctx);
 		BeginDrawing();
 		ClearBackground(BLACK);
-		BeginMode2D(player.cam);
+		BeginMode2D(player->cam);
 		//for (int i = 0; i < STAGE_SIZE; i++) {
 		//	DrawTextureRec(ctx->stage[i].text, ctx->stage[i].rec, ctx->stage[i].pos, ctx->stage[i].tint);
 		//}
-		DrawTexturePro(textAtlas[2], player.recsource, player.bound,
-			player.origin, player.angle + 90,WHITE);
-		DrawLine(player.pos.x, player.pos.y,
-			player.topos.x, player.topos.y, RED);
-		render.renderFadingTxt(delta_time);
+		DrawTexturePro(textAtlas->at(2), player->recsource, player->bound,
+			player->origin, player->angle + 90,WHITE);
+		DrawLine(player->pos.x, player->pos.y,
+			player->topos.x, player->topos.y, RED);
+		renderFadingTxt(delta_time, &Fadetxt_list);
 		EndMode2D();
 		DrawRectangle(width * 0.5 - 100, height - 60, 200, 20, RED);
-		DrawRectangle(width * 0.5 - 100, height - 60, player.attribut.life * 200 / player.attribut.max_life, 20, GREEN);
-		DrawText(TextFormat("%.0f/%d", player.attribut.life, player.attribut.max_life), width * 0.5 - 50, height - 60, 20, BLACK);
+		DrawRectangle(width * 0.5 - 100, height - 60, player->attribut.life * 200 / player->attribut.max_life, 20, GREEN);
+		DrawText(TextFormat("%i / %i", player->attribut.life, player->attribut.max_life), width * 0.5 - 50, height - 60, 20, BLACK);
+		DrawFPS(10, 10);
 		EndDrawing();
 	}
 
-	void	loop() {
+	void	loop(Player *player) {
 		while(state != s_close) {
 			double delta_time = GetFrameTime();
 			switch (state){
@@ -445,7 +490,7 @@ public:
 				MenuStart(delta_time);
 				break;
 			case (s_game):
-				Game(delta_time);
+				Game(delta_time, player);
 				break;
 			case (s_setting):
 				MenuSetting(delta_time);
@@ -455,21 +500,18 @@ public:
 			default:
 				state = s_close;
 				break;
-		}
+			}
 		}
 	}
+
 	Context() {
-		width = 600, height = 400;
 		state = s_menu;
 		InitWindow(width, height, title);
 		font = LoadFont("asset/font/SF_Atarian_System.ttf");
 		SetTextureFilter(font.texture, TEXTURE_FILTER_TRILINEAR);
+		textAtlas = new(std::vector<Texture2D>);
 		LoadTextureAtlas();
-		player.cam.offset.x = width * 0.5;
-		player.cam.offset.y = height * 0.5;
-		player.attribut.life = player.attribut.max_life;
-		render = engine::Rendering();
-		player = Player();
+		SetTargetFPS(120);
 	}
 	~Context(void) {
 		UnloadFont(font);
