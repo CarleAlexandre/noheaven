@@ -31,8 +31,8 @@ int	main(void) {
 	Game::Player		*player = new (Game::Player);
 	engine::FileMgr		*filemgr = new (engine::FileMgr);
 
-	//ctx->itemsAtlas = filemgr->load_Items();
-	//ctx->textAtlas = filemgr->load_Textures();
+	ctx->itemsAtlas = filemgr->loadItemsFromFile("asset/data/items.nhc");
+	player->inventory->add_item(0, 155, ctx->itemsAtlas);
 	ctx->loop(player);
 	return (0);
 }

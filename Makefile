@@ -12,6 +12,8 @@ OBJ		=	$(SRC:%.cpp=%.o)
 
 SERVER_OBJ	=	$(SERVER_SRC:%.cpp=%.o)
 
+DEPS = source/class.hpp source/engine.hpp
+
 SRC		+=	source/engine.cpp
 SRC		+=	source/math.cpp
 
@@ -28,13 +30,13 @@ ifeq ($(shell uname -s), Linux)
 LIBS		=	-lraylib -lGL -lm -lpthread -ldl -lrt -lX11 lstdc++
 endif
 
-$(BUILDDIR)$(NAME)		:	$(OBJ)
+$(BUILDDIR)$(NAME)		:	$(OBJ) $(DEPS)
 		mkdir -p $(BUILDDIR)
 		$(CC) $(OBJ) ${LIBS} -g -o $@
 
 #add this above after lib to have no console: <-mwindows -Wl,--subsystem,windows>
 
-$(OBJ)		:	%.o	:	%.cpp
+$(OBJ)		:	%.o	:	%.cpp $(DEPS)
 		$(CC) $(CFLAGS) ${INCLUDE} -g -c $< -o $@
 
 $(SERVER_NAME)	:	$(OBJ)

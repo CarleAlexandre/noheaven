@@ -24,6 +24,7 @@
 # include <iostream>
 # include <fstream>
 # include <vector>
+# include <sstream>
 # include <string>
 # include <map>
 # include <stdio.h>
@@ -146,22 +147,17 @@ namespace engine {
 
 class FileMgr {
 	private:
+
 	public:
-	// read from a file and put them in a vector, seperated by : every data are in order of the setting struct
-	//std::map<std::string, std::string> parse_setting() {
-	//	std::string line;
-	//	std::map<std::string, std::string> ret_map;
-	//	std::ifstream file("./setting.nhc");
-	//	assert(file.is_open());
-	//	while (std::getline(file, line)) {
-	//	}
-	//}
 
 	std::string	toString(const char *filepath) {
 		std::string line;
 		std::string ret_val;
 		std::ifstream file(filepath);
-		assert(file.is_open());
+
+		if (!file.is_open()) {
+			std::cout << "Failed to open the file: " << filepath << std::endl;
+		}
 		while (std::getline(file, line)) {
 			ret_val.append(line);
 		}
@@ -170,44 +166,56 @@ class FileMgr {
 		line.clear();
 		return (ret_val);
 	}
-	char	*toData(const char *filepath, int *size) {
+	char	*toData(const char *filepath) {
 		std::string line;
 		std::string	str;
+		int	size = 0;
 		std::ifstream file(filepath);
-		assert(file.is_open());
+
+		if (!file.is_open()) {
+			std::cout << "Failed to open the file: " << filepath << std::endl;
+		}
 		while (std::getline(file, line)) {
 			str.append(line);
 		}
 		file.close();
 		file.clear();
 		line.clear();
-		*size = str.size();
-		char *data = static_cast<char *>(malloc(*size));
-		memcpy(data, str.c_str(), *size);
+		size = str.size();
+		char *data = static_cast<char *>(malloc(size));
+		memcpy(data, str.c_str(), size);
 		return (data);
 	}
-	void	write(const char *filepath, const char *data, const size_t size) {
+	void	write(const char *filepath, void *data, const size_t size) {
+		char	*span = static_cast<char *>(data);
 		std::ofstream file(filepath);
-		assert(file.is_open());
-		file.write(data, size);
+		if (!file.is_open()) {
+			std::cout << "Failed to open the file: " << filepath << std::endl;
+		}
+		for (size_t i = 0; i < size; i++) {
+			file.put(span[i]);
+		}
 		file.close();
 		file.clear();
 	}
-	std::vector<Item>	*load_Items() {
-		std::vector<Item> *items;
-		int	size;
-		char *data = toData("items.nhc", &size);
-		items = static_cast<std::vector<Item> *>(malloc(size));
-		memcpy(items, data, size);
-		return (items);
-	}
-	std::vector<Texture2D>	*load_Textures() {
-		std::vector<Texture2D> *text = new (std::vector<Texture2D>);
-		int	size;
-		char *data = toData("items.nhc", &size);
-		text = static_cast<std::vector<Texture2D> *>(malloc(size));
-		memcpy(text, data, size);
-		return (text);
+	std::vector<Item> loadItemsFromFile(const char *filename) {
+		std::vector<Item>	items;
+		std::ifstream		file(filename);
+
+		if (!file.is_open()) {
+			std::cout << "Failed to open the file: " << filename << std::endl;
+			return items;
+		}
+		std::string line;
+		while (std::getline(file, line)) {
+			Item item;
+			std::istringstream iss(line);
+			iss >> item.id >> item.text_index >> item.name >> item.properties;
+			items.push_back(item);
+		}
+
+		file.close();
+		return items;
 	}
 	FileMgr() {
 	}

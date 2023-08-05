@@ -47,13 +47,18 @@ public:
 };
 
 class Inventory {
-	private:
-	std::vector<InvPanel>	inventory;
-	u32						size;
-	public:
 
-	i32	add_item(u32 item_id, u32 number, std::vector<s_Item> *item_list) {
-		if (inventory.size() >= size) {
+private:
+
+	std::vector<InvPanel>	inventory;
+	u32						max_size = 32;
+	u32						max_stack = 5000;//useless for now
+
+public:
+	u32						size;
+
+	i32	add_item(u32 item_id, u32 number, std::vector<s_Item>	item_list) {
+		if (inventory.size() >= max_size) {
 			//cannot add the items;
 			return (-1);
 		}
@@ -64,16 +69,41 @@ class Inventory {
 			}
 		}
 		inventory.push_back(InvPanel{item_id, number});
+		size ++;
 		return (0);
 	}
 
 	void	delete_item(u32 index) {
 		inventory.erase(inventory.begin() + index);
+		size--;
 	}
 
-	void	expend_inventory(u32 added_size) {
-		size += added_size;
-	}
+	void renderInventory(double delta_time, int height, int width, const std::vector<s_Item>& item_list, const std::vector<Texture2D>& textAtlas) {
+        static int	cursorPos = 0;
+        Item		item;
+		int			index;
+
+        DrawRectangle(100, 100, width - 200, height - 200, ColorAlpha(LIGHTGRAY, 0.8));
+        for (int i = 0; i < 5; i++) {
+            for (int y = 0; y < 8; y++) {
+                DrawRectangle(110 + y * 45, 130 + i * 45, 40, 40, DARKGRAY);
+                index = y + (i * 8);
+                if (index < inventory.size()) {
+                    u32 item_id = inventory.at(index).id;
+                    u32 stack_size = inventory.at(index).stack_size;
+                    for (int j = 0; j < item_list.size(); j++) {
+                        if (item_list.at(j).id == item_id) {
+                            item = item_list[j];
+							DrawTextureRec(textAtlas.at(item.text_index), (Rectangle){0, 0, 32, 32}, (Vector2){static_cast<float>(110 + y * 45 + 4), static_cast<float>(130 + i * 45 + 4)}, WHITE);
+							DrawText(TextFormat("%i", stack_size), 110 + y * 45, 160 + i * 45, 10, BLACK);
+                            break;
+                        }
+                    }
+                }
+            }
+        }
+        DrawText("Inventory", 110, 110, 10, BLACK);
+    }
 
 	Inventory() {
 
@@ -103,6 +133,8 @@ public:
 	Vector2		origin;
 	Rectangle	recsource;
 	Vector2		vel;
+
+	Inventory *inventory;
 
 	void	update(double delta_time, std::vector<i32> input_buffer, int *state, std::vector<s_FadeTxt> *Fadetxt_list) {
 		static double acc_time = 0;
@@ -159,6 +191,7 @@ public:
 		recsource = { 0, 0, 64, 64};
 		cam.offset.x = 360;
 		cam.offset.y = 240;
+		inventory = new(Inventory);
 	}
 	~Player(void) {
 
@@ -204,25 +237,26 @@ private:
 	int						width = 720, height = 480;
 	int						state = s_menu;
 	Font					font;
+	bool					inventoryOpen = false;
 
 	void	LoadTextureAtlas() {
-		textAtlas->push_back(LoadTexture("asset/texture/button.png"));
-		textAtlas->push_back(LoadTexture("asset/texture/highlight.png"));
-		textAtlas->push_back(LoadTexture("asset/texture/character.png"));
+		textAtlas.push_back(LoadTexture("asset/texture/button.png"));
+		textAtlas.push_back(LoadTexture("asset/texture/highlight.png"));
+		textAtlas.push_back(LoadTexture("asset/texture/character.png"));
 	}
 
 	void	UnloadTextureAtlas() {
-		for (int i = 0; i < textAtlas->size(); i++) {
-			UnloadTexture(textAtlas->at(i));
+		for (int i = 0; i < textAtlas.size(); i++) {
+			UnloadTexture(textAtlas.at(i));
 		}
 	}
 
 public:
 
-	std::vector<Texture>	*textAtlas;
+	std::vector<Texture>	textAtlas;
 	std::vector<i32>		input_buffer;
 	std::vector<FadeTxt>	Fadetxt_list;
-	std::vector<Item>		*itemsAtlas;
+	std::vector<Item>		itemsAtlas;
 
 	bool IsMouseInBound(Rectangle rec, Vector2 pos, Vector2 mouse_pos) {
 		return (mouse_pos.x >= pos.x && mouse_pos.x <= pos.x + rec.width
@@ -290,6 +324,10 @@ public:
 			//center camera or jump (jump if iso or 3d game)
 			case (KEY_SPACE):
 				player->cam.target = player->pos;
+				break;
+			//open inventory or close
+			case (KEY_TAB):
+				inventoryOpen = !inventoryOpen;
 				break;
 			//openmenu
 			case (KEY_ESCAPE):
@@ -368,7 +406,7 @@ public:
 		ClearBackground(FG);
 		//render ui element here
 		for (int k = 0; k < N_BUTTON_STARTUI; k++) {
-			DrawTextureRec(textAtlas->at(0), button[k].bound, button[k].pos, WHITE);
+			DrawTextureRec(textAtlas.at(0), button[k].bound, button[k].pos, WHITE);
 			DrawTextEx(font, button[k].name.c_str(), (Vector2){ button[k].pos.x + 10, static_cast<float>(button[k].pos.y + button[k].bound.height * 0.5 - 6)}, 22, 0, FG);
 		}
 		DrawText("Menu", 0, 0, 25, BG);
@@ -378,7 +416,7 @@ public:
 		}
 		for (int k = 0; k < N_BUTTON_STARTUI; k++) {
 			if (IsMouseInBound(button[k].bound, button[k].pos, mouse_pos)) {		
-				DrawTextureRec(textAtlas->at(1), button[k].bound, button[k].pos, WHITE);
+				DrawTextureRec(textAtlas.at(1), button[k].bound, button[k].pos, WHITE);
 			}
 		}
 		EndDrawing();
@@ -448,12 +486,12 @@ public:
 		ClearBackground(FG);	
 		DrawText("Setting", 20, 20, 30, BG);
 		for (int k = 0; k < N_BUTTON_SETTINGUI; k++) {
-			DrawTextureRec(textAtlas->at(0), button[k].bound, button[k].pos, WHITE);
+			DrawTextureRec(textAtlas.at(0), button[k].bound, button[k].pos, WHITE);
 			DrawTextEx(font, button[k].name.c_str(), (Vector2){ button[k].pos.x + 10, static_cast<float>(button[k].pos.y + button[k].bound.height * 0.5 - 6)}, 22, 0, FG);
 		}
 		for (int k = 0; k < N_BUTTON_SETTINGUI; k++) {
 			if (IsMouseInBound(button[k].bound, button[k].pos, mouse_pos)) {		
-				DrawTextureRec(textAtlas->at(1), button[k].bound, button[k].pos, WHITE);
+				DrawTextureRec(textAtlas.at(1), button[k].bound, button[k].pos, WHITE);
 			}
 		}
 		EndDrawing();
@@ -469,7 +507,7 @@ public:
 		//for (int i = 0; i < STAGE_SIZE; i++) {
 		//	DrawTextureRec(ctx->stage[i].text, ctx->stage[i].rec, ctx->stage[i].pos, ctx->stage[i].tint);
 		//}
-		DrawTexturePro(textAtlas->at(2), player->recsource, player->bound,
+		DrawTexturePro(textAtlas.at(2), player->recsource, player->bound,
 			player->origin, player->angle + 90,WHITE);
 		DrawLine(player->pos.x, player->pos.y,
 			player->topos.x, player->topos.y, RED);
@@ -478,6 +516,9 @@ public:
 		DrawRectangle(width * 0.5 - 100, height - 60, 200, 20, RED);
 		DrawRectangle(width * 0.5 - 100, height - 60, player->attribut.life * 200 / player->attribut.max_life, 20, GREEN);
 		DrawText(TextFormat("%i / %i", player->attribut.life, player->attribut.max_life), width * 0.5 - 50, height - 60, 20, BLACK);
+		if (inventoryOpen == true) {
+			player->inventory->renderInventory(delta_time, height, width, itemsAtlas, textAtlas);
+		}
 		DrawFPS(10, 10);
 		EndDrawing();
 	}
@@ -509,7 +550,6 @@ public:
 		InitWindow(width, height, title);
 		font = LoadFont("asset/font/SF_Atarian_System.ttf");
 		SetTextureFilter(font.texture, TEXTURE_FILTER_TRILINEAR);
-		textAtlas = new(std::vector<Texture2D>);
 		LoadTextureAtlas();
 		SetTargetFPS(120);
 	}
