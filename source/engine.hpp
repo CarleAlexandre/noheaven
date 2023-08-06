@@ -135,6 +135,7 @@ typedef struct s_spawn_entity{
 	Attribut	attribut;
 }	EntitySpawn;
 
+bool	IsMouseInBound(Rectangle rec, Vector2 pos, Vector2 mouse_pos);
 int		gcd(int a, int b);
 float	smoothStep(float t);
 float	flDistance(struct Vector2 a, struct Vector2 b);

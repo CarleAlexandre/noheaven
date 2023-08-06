@@ -32,7 +32,7 @@ int	main(void) {
 	engine::FileMgr		*filemgr = new (engine::FileMgr);
 
 	ctx->itemsAtlas = filemgr->loadItemsFromFile("asset/data/items.nhc");
-	player->inventory->add_item(0, 155, ctx->itemsAtlas);
+	player->inventory->add_item(0, 999, ctx->itemsAtlas);
 	ctx->loop(player);
 	return (0);
 }

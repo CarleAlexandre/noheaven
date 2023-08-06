@@ -53,6 +53,8 @@ private:
 	std::vector<InvPanel>	inventory;
 	u32						max_size = 32;
 	u32						max_stack = 5000;//useless for now
+	InvPanel				ItemUp;
+	bool					item_is_up;
 
 public:
 	u32						size;
@@ -78,24 +80,51 @@ public:
 		size--;
 	}
 
+	void updateInventory(double delta_time, int height, int width) {
+		if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+			if (item_is_up == false) {
+				Vector2 mouse_pos = GetMousePosition();
+				Rectangle rec = {0, 0, 40, 40};
+
+				int i = 0;
+				int y = 0;
+
+				while (i * 5 + y * 8 < inventory.size()) {
+					if (IsMouseInBound(rec, {static_cast<float>(110 + y * 45), static_cast<float>(130 + i * 45)}, mouse_pos)) {
+						ItemUp.id = inventory.at(i * 5 + y * 8).id;
+						ItemUp.stack_size = inventory.at(i * 5 + y * 8).stack_size;
+						item_is_up = true;
+						//inventory.erase(inventory.begin() + i + y);
+						return;
+					}
+					y++;
+					if (y >= 8) {
+						i++;
+						y = 0;
+					}
+				}
+			} else {
+				item_is_up = false;
+			}
+		}
+	}
+
 	void renderInventory(double delta_time, int height, int width, const std::vector<s_Item>& item_list, const std::vector<Texture2D>& textAtlas) {
         static int	cursorPos = 0;
         Item		item;
 		int			index;
 
-        DrawRectangle(100, 100, width - 200, height - 200, ColorAlpha(LIGHTGRAY, 0.8));
+        DrawRectangle(100, 100, width - 200, height - 200, ColorAlpha(WHITE, 0.8));
         for (int i = 0; i < 5; i++) {
             for (int y = 0; y < 8; y++) {
-                DrawRectangle(110 + y * 45, 130 + i * 45, 40, 40, DARKGRAY);
+                DrawRectangle(110 + y * 45, 130 + i * 45, 40, 40, ColorAlpha(GRAY, 0.5));
                 index = y + (i * 8);
                 if (index < inventory.size()) {
-                    u32 item_id = inventory.at(index).id;
-                    u32 stack_size = inventory.at(index).stack_size;
                     for (int j = 0; j < item_list.size(); j++) {
-                        if (item_list.at(j).id == item_id) {
+                        if (item_list.at(j).id == inventory.at(index).id) {
                             item = item_list[j];
 							DrawTextureRec(textAtlas.at(item.text_index), (Rectangle){0, 0, 32, 32}, (Vector2){static_cast<float>(110 + y * 45 + 4), static_cast<float>(130 + i * 45 + 4)}, WHITE);
-							DrawText(TextFormat("%i", stack_size), 110 + y * 45, 160 + i * 45, 10, BLACK);
+							DrawText(TextFormat("%i", inventory.at(index).stack_size), 130 + y * 45, 160 + i * 45, 10, BLACK);
                             break;
                         }
                     }
@@ -103,10 +132,21 @@ public:
             }
         }
         DrawText("Inventory", 110, 110, 10, BLACK);
+		if (item_is_up == true) {
+			for (int j = 0; j < item_list.size(); j++) {
+        		if (item_list.at(j).id == ItemUp.id) {
+					Vector2 mouse_pos = GetMousePosition();
+        	        item = item_list[j];
+					DrawTextureRec(textAtlas.at(item.text_index), (Rectangle){0, 0, 32, 32}, mouse_pos, WHITE);
+					DrawText(TextFormat("%i", ItemUp.stack_size), mouse_pos.x + 15, mouse_pos.y + 20, 10, BLACK);
+        	        break;
+        	    }
+        	}
+		}
     }
 
 	Inventory() {
-
+		item_is_up = false;
 	}
 
 	~Inventory() {
@@ -133,8 +173,8 @@ public:
 	Vector2		origin;
 	Rectangle	recsource;
 	Vector2		vel;
+	Inventory	*inventory;
 
-	Inventory *inventory;
 
 	void	update(double delta_time, std::vector<i32> input_buffer, int *state, std::vector<s_FadeTxt> *Fadetxt_list) {
 		static double acc_time = 0;
@@ -159,6 +199,7 @@ public:
 		}
 		acc_time += delta_time;
 	}
+
 	Player(void) {
 		pos = {
 			.x = 60,
@@ -193,6 +234,7 @@ public:
 		cam.offset.y = 240;
 		inventory = new(Inventory);
 	}
+
 	~Player(void) {
 
 	}
@@ -257,11 +299,6 @@ public:
 	std::vector<i32>		input_buffer;
 	std::vector<FadeTxt>	Fadetxt_list;
 	std::vector<Item>		itemsAtlas;
-
-	bool IsMouseInBound(Rectangle rec, Vector2 pos, Vector2 mouse_pos) {
-		return (mouse_pos.x >= pos.x && mouse_pos.x <= pos.x + rec.width
-			&& mouse_pos.y >= pos.y && mouse_pos.y <= pos.y + rec.height);
-	}
 
 	void	gameInput(Player *player) {
 		if (IsMouseButtonPressed(MOUSE_RIGHT_BUTTON) || IsMouseButtonDown(MOUSE_RIGHT_BUTTON)) {
@@ -500,6 +537,7 @@ public:
 	void	Game(double delta_time, Player *player) {
 		gameInput(player);
 		player->update(delta_time, input_buffer, &state, &Fadetxt_list);
+		player->inventory->updateInventory(delta_time, height, width);
 		//updateEntity(ctx);
 		BeginDrawing();
 		ClearBackground(BLACK);
