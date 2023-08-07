@@ -108,6 +108,7 @@ typedef struct s_Item {
 typedef struct s_InventoryPanel {
 	u32			id;
 	u32			stack_size;
+	u32			index;
 }	InvPanel;
 
 typedef struct s_LootTable {

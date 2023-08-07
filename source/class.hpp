@@ -82,12 +82,12 @@ public:
 
 	void updateInventory(double delta_time, int height, int width) {
 		if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-			if (item_is_up == false) {
-				Vector2 mouse_pos = GetMousePosition();
-				Rectangle rec = {0, 0, 40, 40};
+			Vector2 mouse_pos = GetMousePosition();
+			Rectangle rec = {0, 0, 40, 40};
+			int i = 0;
+			int y = 0;
 
-				int i = 0;
-				int y = 0;
+			if (item_is_up == false) {
 
 				while (i * 5 + y * 8 < inventory.size()) {
 					if (IsMouseInBound(rec, {static_cast<float>(110 + y * 45), static_cast<float>(130 + i * 45)}, mouse_pos)) {
@@ -105,6 +105,9 @@ public:
 				}
 			} else {
 				item_is_up = false;
+				inventory.erase(inventory.begin() + ItemUp.index);
+				ItemUp.index = inventory.size();
+				inventory.push_back(ItemUp);
 			}
 		}
 	}
@@ -155,8 +158,25 @@ public:
 };
 
 class GameMap {
-	//list of element
+
+	private:
 	std::vector<int> background;
+
+	public:
+	//list of element
+	u32	width;
+	u32	height;
+
+	void	renderMap(Texture2D background) {
+		Rectangle src;
+		DrawTextureRec(background, src, {0, 0}, WHITE);
+	}
+
+	GameMap() {
+	}
+
+	~GameMap() {
+	}
 };
 
 class Player {
