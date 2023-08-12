@@ -12,7 +12,7 @@ OBJ		=	$(SRC:%.cpp=%.o)
 
 SERVER_OBJ	=	$(SERVER_SRC:%.cpp=%.o)
 
-DEPS = source/class.hpp source/engine.hpp
+DEPS = source/engine.hpp
 
 SRC		+=	source/engine.cpp
 SRC		+=	source/math.cpp

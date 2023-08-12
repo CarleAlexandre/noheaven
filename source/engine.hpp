@@ -14,20 +14,12 @@
 # include <stdint.h>
 # include <stddef.h>
 # include <stdbool.h>
-
-# include <stdlib.h>
-# include <time.h>
 # include <math.h>
-
-# include <assert.h>
-
 # include <iostream>
 # include <fstream>
 # include <vector>
 # include <sstream>
 # include <string>
-# include <map>
-# include <stdio.h>
 
 typedef int16_t		i16;
 typedef uint16_t	u16;
@@ -63,8 +55,6 @@ enum proffesion {
 
 #define N_BUTTON_STARTUI	3
 #define N_BUTTON_SETTINGUI	4
-
-#define DEBUG fprintf(stderr, "error is after line: %i, %s\n", __LINE__, __FUNCTION__);
 
 typedef struct s_Attribut {
 	float	speed;
@@ -136,6 +126,18 @@ typedef struct s_spawn_entity{
 	Attribut	attribut;
 }	EntitySpawn;
 
+typedef struct s_Context {
+	const char				*title = "noHeaven";
+	int						width = 720, height = 480;
+	int						state = s_menu;
+	bool					inventoryOpen = false;
+	Font					font;
+	std::vector<Texture>	textAtlas;
+	std::vector<i32>		input_buffer;
+	std::vector<FadeTxt>	Fadetxt_list;
+	std::vector<Item>		itemsAtlas;
+}	Context;
+
 bool	IsMouseInBound(Rectangle rec, Vector2 pos, Vector2 mouse_pos);
 int		gcd(int a, int b);
 float	smoothStep(float t);
@@ -145,89 +147,324 @@ Vector2	toTravel(struct Vector2 current, struct Vector2 target, float velocity, 
 Vector2	screenPosToWorldPos(Vector2 screen_pos, Vector2 camera_target, int s_width, int s_height, float zoom);
 Vector2	worldPosToScreenPos(Vector2 world_pos, Vector2 camera_target, int s_width, int s_height, float zoom);
 
-namespace engine {
+void	addFadingTxt(std::string text, double delay, Color color, int font_size, Vector2 pos, std::vector<s_FadeTxt> *Fadetxt_list);
+void	renderFadingTxt(double delta_time, std::vector<s_FadeTxt> *Fadetxt_list);
 
-class FileMgr {
-	private:
+class Loot {
 
-	public:
+private:
+	s_LootTable loot_table;
 
-	std::string	toString(const char *filepath) {
-		std::string line;
-		std::string ret_val;
-		std::ifstream file(filepath);
+public:
 
-		if (!file.is_open()) {
-			std::cout << "Failed to open the file: " << filepath << std::endl;
-		}
-		while (std::getline(file, line)) {
-			ret_val.append(line);
-		}
-		file.close();
-		file.clear();
-		line.clear();
-		return (ret_val);
+	void	addLoot(u32 id, float drop_rate) {
+		loot_table.drop_rate.push_back(drop_rate);
+		loot_table.item_id.push_back(id);
+		loot_table.size++;
 	}
-	char	*toData(const char *filepath) {
-		std::string line;
-		std::string	str;
-		int	size = 0;
-		std::ifstream file(filepath);
 
-		if (!file.is_open()) {
-			std::cout << "Failed to open the file: " << filepath << std::endl;
+	std::vector<u32>	generateLoot(int loot_size, time_t time_arg) {
+		std::vector<u32> loot;
+		float	roll = 0.0f;
+		float	cumulative_prob = 0.05f;
+		time_t	seed = time_arg * 1000;
+		// Initialize random number generator
+		srand((unsigned int) seed);
+		// Generate loot items
+		for (int i = 0; i < loot_table.size; i++) {
+			roll = (float) rand() / (float)RAND_MAX;
+			for (int j = 0; j < loot_table.size; j++) {
+				cumulative_prob += loot_table.drop_rate[j];
+				if (roll <= cumulative_prob) {
+					loot.push_back(loot_table.item_id[j]);
+					break;
+				}
+			}
 		}
-		while (std::getline(file, line)) {
-			str.append(line);
-		}
-		file.close();
-		file.clear();
-		line.clear();
-		size = str.size();
-		char *data = static_cast<char *>(malloc(size));
-		memcpy(data, str.c_str(), size);
-		return (data);
+		return (loot);
 	}
-	void	write(const char *filepath, void *data, const size_t size) {
-		char	*span = static_cast<char *>(data);
-		std::ofstream file(filepath);
-		if (!file.is_open()) {
-			std::cout << "Failed to open the file: " << filepath << std::endl;
-		}
-		for (size_t i = 0; i < size; i++) {
-			file.put(span[i]);
-		}
-		file.close();
-		file.clear();
+	Loot(void) {
 	}
-	std::vector<Item> loadItemsFromFile(const char *filename) {
-		std::vector<Item>	items;
-		std::ifstream		file(filename);
+	~Loot(void) {
 
-		if (!file.is_open()) {
-			std::cout << "Failed to open the file: " << filename << std::endl;
-			return items;
-		}
-		std::string line;
-		while (std::getline(file, line)) {
-			Item item;
-			std::istringstream iss(line);
-			iss >> item.id >> item.text_index >> item.name >> item.properties;
-			items.push_back(item);
-		}
-
-		file.close();
-		return items;
-	}
-	FileMgr() {
-	}
-	~FileMgr() {
 	}
 };
 
-}
+class Inventory {
 
-void	addFadingTxt(std::string text, double delay, Color color, int font_size, Vector2 pos, std::vector<s_FadeTxt> *Fadetxt_list);
-void	renderFadingTxt(double delta_time, std::vector<s_FadeTxt> *Fadetxt_list);
+private:
+
+	std::vector<InvPanel>	inventory;
+	u32						max_size = 200;
+	u32						max_stack = 5000;//useless for now
+	InvPanel				ItemUp;
+	bool					item_is_up = false;
+	bool					draggingScrollBar = false;
+	int						cursorPos = 0;
+
+public:
+	u32						size;
+
+	i32	add_item(u32 item_id, u32 number, std::vector<s_Item>	item_list) {
+		if (inventory.size() >= max_size) {
+			//cannot add the items;
+			return (-1);
+		}
+		//for (i32 i = 0; i < inventory.size(); i++) {
+		//	if (inventory.at(i).id == item_id) {
+		//		inventory.at(i).stack_size += number;
+		//		return (0);
+		//	}
+		//}
+		inventory.push_back(InvPanel{item_id, number});
+		size ++;
+		return (0);
+	}
+
+	void	delete_item(u32 index) {
+		inventory.erase(inventory.begin() + index);
+		size--;
+	}
+
+	void updateInventory(double delta_time, int height, int width) {
+		if (IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
+			Vector2 mouse_pos = GetMousePosition();
+			Rectangle scrollBar = {90, 130, 10, static_cast<float>(5 + height - 260)}; // Scrollbar dimensions
+        	if (IsMouseInBound(scrollBar, {90, 130}, mouse_pos)) {
+        	    draggingScrollBar = true;
+        	} else {
+        	    draggingScrollBar = false;
+        	}
+
+			if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON)) {
+				draggingScrollBar = false;
+			}
+			
+			if (draggingScrollBar == true) {
+				cursorPos = mouse_pos.y - 130;
+
+						// Calculate the number of rows and columns for the inventory
+				int rows = (inventory.size() + 7) / 8; // Rounded up division
+				int cols = std::min(8, static_cast<int>(inventory.size()));
+
+				// Calculate the total height required for all rows
+				int totalHeight = rows * 45;
+				// Calculate the maximum offset for scrolling
+				int maxOffset = std::max(0, totalHeight - (5 * 45));
+					// Update the cursor position based on scrolling
+				if (cursorPos < 0) {
+					cursorPos = 0;
+				}
+				if (cursorPos > height - 200) {
+					cursorPos = height - 290;
+				}
+			}
+		}
+		if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
+			Vector2 mouse_pos = GetMousePosition();
+			Rectangle rec = {0, 0, 40, 40};
+
+			if (item_is_up == false) {
+				int i = 0;
+				int y = 0;
+				while (i * 5 + y * 8 < inventory.size()) {
+					if (IsMouseInBound(rec, {static_cast<float>(110 + y * 45), static_cast<float>(130 + i * 45)}, mouse_pos)) {
+						ItemUp.id = inventory.at(i * 5 + y * 8).id;
+						ItemUp.stack_size = inventory.at(i * 5 + y * 8).stack_size;
+						item_is_up = true;
+						//inventory.erase(inventory.begin() + i + y);
+						return;
+					}
+					y++;
+					if (y >= 8) {
+						i++;
+						y = 0;
+					}
+				}
+			} else {
+				item_is_up = false;
+				//inventory.erase(inventory.begin() + ItemUp.index);
+				//ItemUp.index = inventory.size();
+				//inventory.push_back(ItemUp);
+			}
+		}
+	}
+
+	void renderInventory(double delta_time, int height, int width, const std::vector<s_Item>& item_list, const std::vector<Texture2D>& textAtlas) {
+        Item		item;
+		int			index;
+
+		int visibleSlots = 5 * 8; // Number of visible slots
+
+		DrawRectangle(100, 100, width - 200, height - 200, ColorAlpha(WHITE, 0.1));
+
+		// Calculate the current row based on the cursor position
+		int currentRow = cursorPos / 45;
+
+		// Calculate the starting index for the items in the current row
+		int startIdx = currentRow * 8;
+
+		// Calculate the ending index for the items in the current row
+		int endIdx = std::min(startIdx + 8 * 5, static_cast<int>(inventory.size()));
+
+		for (int i = 0; i < 5; i++) {
+			for (int y = 0; y < 8; y++) {
+				int index = startIdx + y + (i * 8);
+
+				if (index >= endIdx) {
+					break;
+				}
+
+				DrawRectangle(110 + y * 45, 130 + i * 45, 40, 40, ColorAlpha(GRAY, 0.2));
+
+				u32 item_id = inventory[index].id;
+				u32 stack_size = inventory[index].stack_size;
+
+				Item item;
+				for (int j = 0; j < item_list.size(); j++) {
+					if (item_list[j].id == item_id) {
+						item = item_list[j];
+						DrawTextureRec(textAtlas[item.text_index], (Rectangle){0, 0, 32, 32}, {static_cast<float>(110 + y * 45 + 4), static_cast<float>(130 + i * 45 + 4)}, WHITE);
+						DrawText(TextFormat("%i", stack_size), 130 + y * 45, 160 + i * 45, 10, BLACK);
+						break;
+					}
+				}
+			}
+		}
+		Rectangle scrollBar = {90, static_cast<float>(130 + cursorPos), 10, static_cast<float>(30)};
+    	DrawRectangleRec(scrollBar, DARKGRAY);
+        DrawText("Inventory", 110, 110, 10, WHITE);
+		if (item_is_up == true) {
+			for (int j = 0; j < item_list.size(); j++) {
+        		if (item_list.at(j).id == ItemUp.id) {
+					Vector2 mouse_pos = GetMousePosition();
+        	        item = item_list[j];
+					DrawTextureRec(textAtlas.at(item.text_index), (Rectangle){0, 0, 32, 32}, mouse_pos, WHITE);
+					DrawText(TextFormat("%i", ItemUp.stack_size), mouse_pos.x + 15, mouse_pos.y + 20, 10, BLACK);
+        	        break;
+        	    }
+        	}
+		}
+    }
+
+	Inventory() {
+	}
+
+	~Inventory() {
+
+	}
+};
+
+class Player {
+
+private:
+
+public:
+	Vector2		pos;
+	Camera2D	cam;
+	Attribut	attribut;
+	Vector2		topos;
+	Rectangle	bound;
+	float		angle;
+	Vector2		origin;
+	Rectangle	recsource;
+	Vector2		vel;
+	Inventory	*inventory;
+
+
+	void	update(double delta_time, std::vector<i32> input_buffer, int *state, std::vector<s_FadeTxt> *Fadetxt_list) {
+		static double acc_time = 0;
+		if (flDistance(pos, topos) > 0.01f) {
+			pos = toTravel(pos, topos, attribut.speed * delta_time, delta_time);
+		}
+		bound.x = pos.x;
+		bound.y = pos.y;
+		if (attribut.life < 0) {
+			attribut.life = 0;
+			*state = s_gameover;
+		}
+		if (attribut.life > attribut.max_life) {
+			attribut.life = attribut.max_life; 
+		}
+		if (acc_time >= 1) {
+			if (attribut.life < attribut.max_life) {
+				attribut.life += attribut.life_regen;
+				addFadingTxt(TextFormat("+%.0f", attribut.life_regen), 0.8f, GREEN, 12, pos, Fadetxt_list);
+			}
+			acc_time = 0;
+		}
+		acc_time += delta_time;
+	}
+
+	Player(void) {
+		pos = {
+			.x = 60,
+			.y = 60
+		};
+		vel = {
+			.x = 0,
+			.y = 0
+		};
+		topos = {
+			.x = 60,
+			.y = 60
+		};
+		cam = (Camera2D){
+			.target = {
+		 		.x = 60,
+				.y = 60,
+			},
+			.rotation = 0,
+			.zoom = 1.0f,
+		};
+		bound = { 0, 0, 64, 64};
+		attribut = {
+			.speed = 20000.0f,
+			.life = 1500,
+			.max_life = 1500,
+			.life_regen = 12.0f,
+		};
+		origin = { 32, 32};
+		recsource = { 0, 0, 64, 64};
+		cam.offset.x = 360;
+		cam.offset.y = 240;
+		inventory = new(Inventory);
+	}
+
+	~Player(void) {
+
+	}
+};
+
+class Entity {
+
+private:
+
+	std::vector<s_entity> element;
+	std::vector<s_spawn_entity>	spawns;
+
+public:
+
+	void	update(double delta_time) {
+		for (i32 i = 0; i < spawns.size(); i++) {\
+			if (spawns.at(i).number_left == 0) {
+				spawns.erase(spawns.begin() + i);
+			}
+		}
+	}
+	void	add_spawn(EntitySpawn new_spawn) {
+		spawns.push_back(new_spawn);
+		//element.push_back();
+	}
+	void	loadAllEntity(void) {
+
+	};
+	Entity(void) {
+		loadAllEntity();
+	}
+	~Entity(void) {
+
+	}
+};
 
 #endif
