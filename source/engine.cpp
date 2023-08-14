@@ -173,6 +173,9 @@ void	gameInput(Player *player) {
 		//open inventory or close
 		case (KEY_TAB):
 			ctx.inventoryOpen = !ctx.inventoryOpen;
+			if (ctx.inventoryOpen) {
+				player->inventory->resetRender(ctx.height, ctx.width, 100, ctx.height * 0.25);
+			}
 			break;
 		//openmenu
 		case (KEY_ESCAPE):
@@ -341,7 +344,9 @@ void	MenuSetting(double delta_time) {
 void	Game(double delta_time, Player *player) {
 	gameInput(player);
 	player->update(delta_time, ctx.input_buffer, &ctx.state, &ctx.Fadetxt_list);
-	player->inventory->updateInventory(delta_time, ctx.height, ctx.width);
+	if (ctx.inventoryOpen == true) {
+		player->inventory->updateInventory(delta_time, ctx.width, ctx.height);
+	}
 	//updateEntity(ctx);
 	BeginDrawing();
 	ClearBackground(BLACK);
@@ -359,7 +364,7 @@ void	Game(double delta_time, Player *player) {
 	DrawRectangle(ctx.width * 0.5 - 100, ctx.height - 60, player->attribut.life * 200 / player->attribut.max_life, 20, GREEN);
 	DrawText(TextFormat("%i / %i", player->attribut.life, player->attribut.max_life), ctx.width * 0.5 - 50, ctx.height - 60, 20, BLACK);
 	if (ctx.inventoryOpen == true) {
-		player->inventory->renderInventory(delta_time, ctx.height, ctx.width, ctx.itemsAtlas, ctx.textAtlas);
+		player->inventory->renderInventory(delta_time, ctx.itemsAtlas, ctx.textAtlas);
 	}
 	DrawFPS(10, 10);
 	EndDrawing();
@@ -393,9 +398,10 @@ int	main(void) {
 	LoadTextureAtlas();
 	SetTargetFPS(120);
 
+	player->inventory->init(ctx.height, ctx.width, 100, ctx.height * 0.25, 100, 999);
 	ctx.itemsAtlas = filemgr->loadItemsFromFile("asset/data/items.nhc");
 	for (int i = 0; i < 100; i++) {
-		player->inventory->add_item(0, 999, ctx.itemsAtlas);
+		player->inventory->add(0, 999, ctx.itemsAtlas);
 	}
 
 	while(ctx.state != s_close) {
