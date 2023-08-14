@@ -68,6 +68,8 @@ class FileMgr {
 			Item item;
 			std::istringstream iss(line);
 			iss >> item.id >> item.text_index >> item.name >> item.properties;
+			if (item.id != items.size())
+				std::cout << "not the correct id\n";
 			items.push_back(item);
 		}
 

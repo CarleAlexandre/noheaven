@@ -201,6 +201,7 @@ private:
 	bool					item_is_up = false;
 	bool					draggingScrollBar = false;
 	int						cursorPos = 0;
+	int						scrollOffset = 0;
 
 public:
 	u32						size;
@@ -229,12 +230,12 @@ public:
 	void updateInventory(double delta_time, int height, int width) {
 		if (IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
 			Vector2 mouse_pos = GetMousePosition();
-			Rectangle scrollBar = {90, 130, 10, static_cast<float>(5 + height - 260)}; // Scrollbar dimensions
-        	if (IsMouseInBound(scrollBar, {90, 130}, mouse_pos)) {
+			Rectangle scrollBar = {0, 0, 10, static_cast<float>(5 + height - 260)}; // Scrollbar dimensions
+        	if (IsMouseInBound(scrollBar, {465, 130}, mouse_pos)) {
         	    draggingScrollBar = true;
         	} else {
-        	    draggingScrollBar = false;
-        	}
+				draggingScrollBar = false;
+			}
 
 			if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON)) {
 				draggingScrollBar = false;
@@ -243,21 +244,20 @@ public:
 			if (draggingScrollBar == true) {
 				cursorPos = mouse_pos.y - 130;
 
-						// Calculate the number of rows and columns for the inventory
-				int rows = (inventory.size() + 7) / 8; // Rounded up division
-				int cols = std::min(8, static_cast<int>(inventory.size()));
-
 				// Calculate the total height required for all rows
-				int totalHeight = rows * 45;
+				int totalHeight = (inventory.size() + 7) / 8 * 45; // should use this for the crosse product in the render function
+				// total inv size / diplayed inv size = total bar size / current bar pos
 				// Calculate the maximum offset for scrolling
 				int maxOffset = std::max(0, totalHeight - (5 * 45));
-					// Update the cursor position based on scrolling
+
+				// Update the cursor position based on scrolling
 				if (cursorPos < 0) {
 					cursorPos = 0;
 				}
-				if (cursorPos > height - 200) {
-					cursorPos = height - 290;
+				if (cursorPos > height - maxOffset) {
+					cursorPos = height - maxOffset;
 				}
+				scrollOffset = cursorPos;
 			}
 		}
 		if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
@@ -267,7 +267,8 @@ public:
 			if (item_is_up == false) {
 				int i = 0;
 				int y = 0;
-				while (i * 5 + y * 8 < inventory.size()) {
+				int startIdx = scrollOffset * 8;
+				while (i < 5 && startIdx + y + (i * 8) < inventory.size()) {
 					if (IsMouseInBound(rec, {static_cast<float>(110 + y * 45), static_cast<float>(130 + i * 45)}, mouse_pos)) {
 						ItemUp.id = inventory.at(i * 5 + y * 8).id;
 						ItemUp.stack_size = inventory.at(i * 5 + y * 8).stack_size;
@@ -294,44 +295,42 @@ public:
         Item		item;
 		int			index;
 
-		int visibleSlots = 5 * 8; // Number of visible slots
-
 		DrawRectangle(100, 100, width - 200, height - 200, ColorAlpha(WHITE, 0.1));
 
-		// Calculate the current row based on the cursor position
-		int currentRow = cursorPos / 45;
-
+		// Calculate the total height required for all rows
+		int totalHeight = (inventory.size() + 7) / 8 * 45;
+		// Calculate the maximum offset for scrolling
+		int maxOffset = std::max(0, totalHeight - (5 * 45));
 		// Calculate the starting index for the items in the current row
-		int startIdx = currentRow * 8;
-
+		int startIdx = scrollOffset * 8;
 		// Calculate the ending index for the items in the current row
-		int endIdx = std::min(startIdx + 8 * 5, static_cast<int>(inventory.size()));
+		int endIdx = std::min(startIdx + (8 * 5), static_cast<int>(inventory.size()));
 
-		for (int i = 0; i < 5; i++) {
-			for (int y = 0; y < 8; y++) {
-				int index = startIdx + y + (i * 8);
-
-				if (index >= endIdx) {
-					break;
-				}
-
-				DrawRectangle(110 + y * 45, 130 + i * 45, 40, 40, ColorAlpha(GRAY, 0.2));
-
-				u32 item_id = inventory[index].id;
-				u32 stack_size = inventory[index].stack_size;
-
-				Item item;
-				for (int j = 0; j < item_list.size(); j++) {
-					if (item_list[j].id == item_id) {
-						item = item_list[j];
-						DrawTextureRec(textAtlas[item.text_index], (Rectangle){0, 0, 32, 32}, {static_cast<float>(110 + y * 45 + 4), static_cast<float>(130 + i * 45 + 4)}, WHITE);
-						DrawText(TextFormat("%i", stack_size), 130 + y * 45, 160 + i * 45, 10, BLACK);
+		if (startIdx < inventory.size()) {
+			for (int i = 0; i < 5; i++) {
+				DrawText(TextFormat("%i", (startIdx / 8) + i + 1), 100, 130 + i * 45, 10, WHITE);
+				for (int y = 0; y < 8; y++) {
+					int index = startIdx + y + (i * 8);
+					if (index >= endIdx) {
+						i = 6;
 						break;
+					}
+					DrawRectangle(110 + y * 45, 130 + i * 45, 40, 40, ColorAlpha(GRAY, 0.2));
+					u32 item_id = inventory[index].id;
+					u32 stack_size = inventory[index].stack_size;
+					Item item;
+					for (int j = 0; j < item_list.size(); j++) {
+						if (item_list[item_id].id == item_id) {
+							item = item_list[item_id];
+							DrawTextureRec(textAtlas[item.text_index], (Rectangle){0, 0, 32, 32}, {static_cast<float>(110 + y * 45 + 4), static_cast<float>(130 + i * 45 + 4)}, WHITE);
+							DrawText(TextFormat("%i", stack_size), 130 + y * 45, 160 + i * 45, 10, BLACK);
+							break;
+						}
 					}
 				}
 			}
 		}
-		Rectangle scrollBar = {90, static_cast<float>(130 + cursorPos), 10, static_cast<float>(30)};
+		Rectangle scrollBar = {465, static_cast<float>(130 + cursorPos), 10, static_cast<float>(30)};
     	DrawRectangleRec(scrollBar, DARKGRAY);
         DrawText("Inventory", 110, 110, 10, WHITE);
 		if (item_is_up == true) {
