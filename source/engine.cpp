@@ -172,10 +172,7 @@ void	gameInput(Player *player) {
 			break;
 		//open inventory or close
 		case (KEY_TAB):
-			ctx.inventoryOpen = !ctx.inventoryOpen;
-			if (ctx.inventoryOpen) {
-				player->inventory->resetRender(ctx.height, ctx.width, 100, ctx.height * 0.25);
-			}
+			ctx.inventoryOpen = true;
 			break;
 		//openmenu
 		case (KEY_ESCAPE):
@@ -342,12 +339,17 @@ void	MenuSetting(double delta_time) {
 }
 
 void	Game(double delta_time, Player *player) {
-	gameInput(player);
-	player->update(delta_time, ctx.input_buffer, &ctx.state, &ctx.Fadetxt_list);
-	if (ctx.inventoryOpen == true) {
+	if (ctx.inventoryOpen == false) {
+		gameInput(player);
+		player->update(delta_time, ctx.input_buffer, &ctx.state, &ctx.Fadetxt_list);
+		//updateEntity(ctx);
+	} else {
 		player->inventory->updateInventory(delta_time, ctx.width, ctx.height);
+		if (IsKeyPressed(KEY_TAB) || IsKeyPressed(KEY_ESCAPE)) {
+			ctx.inventoryOpen = false;
+			player->inventory->resetRender(ctx.height, ctx.width, 100, ctx.height * 0.25);
+		}
 	}
-	//updateEntity(ctx);
 	BeginDrawing();
 	ClearBackground(BLACK);
 	BeginMode2D(player->cam);
@@ -392,19 +394,22 @@ int	main(void) {
 	ctx.state = s_menu;
 	ctx.inventoryOpen = false;
 	ctx.state = s_menu;
+	SetConfigFlags(FLAG_WINDOW_RESIZABLE);
 	InitWindow(ctx.width, ctx.height, ctx.title);
 	ctx.font = LoadFont("asset/font/SF_Atarian_System.ttf");
 	SetTextureFilter(ctx.font.texture, TEXTURE_FILTER_TRILINEAR);
 	LoadTextureAtlas();
-	SetTargetFPS(120);
-
-	player->inventory->init(ctx.height, ctx.width, 100, ctx.height * 0.25, 100, 999);
 	ctx.itemsAtlas = filemgr->loadItemsFromFile("asset/data/items.nhc");
 	for (int i = 0; i < 100; i++) {
 		player->inventory->add(0, 999, ctx.itemsAtlas);
 	}
-
+	player->inventory->init(ctx.height, ctx.width, 100, ctx.height * 0.25);
+	SetTargetFPS(120);
 	while(ctx.state != s_close) {
+		if (IsWindowResized() == true) {
+			ctx.height = GetScreenHeight();
+			ctx.width = GetScreenWidth();
+		}
 		double delta_time = GetFrameTime();
 		switch (ctx.state){
 		case (s_menu):

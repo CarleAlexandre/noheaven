@@ -196,12 +196,13 @@ class Inventory {
 	public:
 	std::vector<s_InventoryPanel>	store;
 	Rectangle						bound;
-	int								capacity = 0;
-	int								max_stack = 0;
+	int								capacity = 30;
+	int								max_stack = 999;
 	int								cursorPos = 0;
 	int								scrollOffset = 0;
 	int								row = 0;
 	int								column = 0;
+	int								scrollBarSize = 0;
 
 	i32	add(u32 item_id, u32 number, std::vector<s_Item> item_list) {
 		if (store.size() >= capacity) {
@@ -222,15 +223,14 @@ class Inventory {
 		store.erase(store.begin() + index);
 	}
 
-	void	init(int height, int width, int x, int y, int capacity, int stack_size) {
+	void	init(int height, int width, int x, int y) {
 		bound.height = height * 0.5;
 		bound.width = width * 0.5;
 		bound.x = x;
 		bound.y = y;
 		row = floor((bound.height - 20) / 45);
 		column = floor((bound.width - 10) / 45);
-		this->capacity = capacity;
-		this->max_stack = stack_size;
+		scrollBarSize = std::min(static_cast<float>((bound.height - 50) * (static_cast<float>(row * column) / store.size())), bound.height - 30);
 	}
 
 	void	resetRender(int height, int width, int x, int y) {
@@ -240,6 +240,11 @@ class Inventory {
 		bound.width -= static_cast<int>(bound.width) % 45 + 20;
 		bound.x = x;
 		bound.y = y;
+		row = floor((bound.height - 20) / 45);
+		column = floor((bound.width - 10) / 45);
+		cursorPos = 0;
+		scrollOffset = 0;
+		scrollBarSize = std::min(static_cast<float>((bound.height - 50) * (static_cast<float>(row * column) / store.size())), bound.height - 30);
 	}
 
 	void updateInventory(double delta_time, int win_width, int win_height) {
@@ -249,15 +254,15 @@ class Inventory {
 		Vector2			mouse_pos = GetMousePosition();
 		
 		if (draggingScrollBar == true) {
-			cursorPos = mouse_pos.y - (bound.y + 10 + static_cast<float>((bound.height - 50) * (static_cast<float>(row * column) / store.size())) * 0.5);
-			int maxOffset = (bound.height - 50);
+			cursorPos = mouse_pos.y - (bound.y + 10 + scrollBarSize * 0.5);
+			int maxOffset = bound.height - 10 - scrollBarSize;
 			if (cursorPos < 0) {
 				cursorPos = 0;
 			}
 			if (cursorPos > maxOffset) {
 				cursorPos = maxOffset;
 			}
-			scrollOffset = static_cast<int>(((static_cast<float>(cursorPos) / maxOffset) * (store.size() / (column + 1))));
+			scrollOffset = static_cast<int>(((static_cast<float>(cursorPos) / maxOffset) * (store.size() / column)));
 		}
 		if (dragWindow == true) {
 			Vector2 new_pos;
@@ -265,21 +270,19 @@ class Inventory {
 			new_pos.y = mouse_pos.y - old_pos.y;
 			bound.x += new_pos.x;
 			bound.y += new_pos.y;
-			if (10 >= bound.x) {
-				bound.x = 10;
-			}
 			if (bound.x >= win_width - bound.width - 10) {
 				bound.x = win_width - bound.width - 10;
-			}
-			if (10 >= bound.y) {
-				bound.y = 10;
+			} else if (10 >= bound.x) {
+				bound.x = 10;
 			}
 			if (bound.y >= win_height - bound.height - 10) {
 				bound.y = win_height - bound.height - 10;
+			} else if (10 >= bound.y) {
+				bound.y = 10;
 			}
 		}
 		if (IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
-			Rectangle scrollBar = {0, 0, 10, bound.height}; // Scrollbar dimensions
+			Rectangle scrollBar = {0, 0, 10, bound.height};
         	if (IsMouseInBound(scrollBar, {bound.x + bound.width - 10, bound.y + 10}, mouse_pos)) {
         	    draggingScrollBar = true;
         	} else if (IsMouseInBound({0, 0, bound.width, 10}, {bound.x, bound.y}, mouse_pos)) {
@@ -301,9 +304,7 @@ class Inventory {
 
 		DrawRectangle(bound.x, bound.y, bound.width, bound.height, ColorAlpha(BG, 0.1));
 
-		// Calculate the starting index for the items in the current row
-		int startIdx = scrollOffset * 8;
-		// Calculate the ending index for the items in the current row
+		int startIdx = scrollOffset * column;
 		int endIdx = std::min(startIdx + (row * column), static_cast<int>(store.size()));
 
 		if (startIdx < store.size()) {
@@ -331,7 +332,7 @@ class Inventory {
 			}
 		}
 		DrawRectangle(bound.x, bound.y, bound.width, 10, ColorAlpha(FG, 0.5));
-		Rectangle scrollBar = {bound.x + bound.width - 10, cursorPos + bound.y + 10, 10, static_cast<float>((bound.height - 50) * (static_cast<float>(row * column) / store.size()))};
+		Rectangle scrollBar = {bound.x + bound.width - 10, cursorPos + bound.y + 10, 10, static_cast<float>(scrollBarSize)};
     	DrawRectangleRec(scrollBar, DARKGRAY);
 		DrawText("Inventory", bound.x + 1, bound.y + 1, 8, BG);
 	}
@@ -339,174 +340,6 @@ class Inventory {
 	Inventory(){}
 	~Inventory(){}
 };
-//class Inventory {
-
-//private:
-
-//	std::vector<InvPanel>	inventory;
-//	u32						max_size = 200;
-//	u32						max_stack = 5000;//useless for now
-//	InvPanel				ItemUp;
-//	bool					item_is_up = false;
-//	int						cursorPos = 0;
-//	int						scrollOffset = 0;
-//	int						inv_height = 0;
-//	int						inv_width = 0;
-
-//public:
-//	u32						size;
-
-//	i32	add_item(u32 item_id, u32 number, std::vector<s_Item>	item_list) {
-//		if (inventory.size() >= max_size) {
-//			//cannot add the items;
-//			return (-1);
-//		}
-//		//for (i32 i = 0; i < inventory.size(); i++) {
-//		//	if (inventory.at(i).id == item_id) {
-//		//		inventory.at(i).stack_size += number;
-//		//		return (0);
-//		//	}
-//		//}
-//		inventory.push_back(InvPanel{item_id, number});
-//		size ++;
-//		return (0);
-//	}
-
-//	void	delete_item(u32 index) {
-//		inventory.erase(inventory.begin() + index);
-//		size--;
-//	}
-
-//	void updateInventory(double delta_time, int height, int width) {
-//		static bool	draggingScrollBar = false;
-
-//		inv_height = height;
-//		inv_width = width;
-//		if (IsMouseButtonDown(MOUSE_LEFT_BUTTON)) {
-//			Vector2 mouse_pos = GetMousePosition();
-//			Rectangle scrollBar = {0, 0, 10, static_cast<float>(5 + height - 260)}; // Scrollbar dimensions
-//        	if (IsMouseInBound(scrollBar, {465, 130}, mouse_pos)) {
-//        	    draggingScrollBar = true;
-//        	} else {
-//				draggingScrollBar = false;
-//			}
-
-//			if (IsMouseButtonReleased(MOUSE_LEFT_BUTTON)) {
-//				draggingScrollBar = false;
-//			}
-			
-//			if (draggingScrollBar == true) {
-//				cursorPos = mouse_pos.y - 130;
-
-//				// Calculate the total height required for all rows
-//				int totalHeight = (inventory.size()) / 5 * 45;// * 45; // should use this for the crosse product in the render function
-//				// total inv size / diplayed inv size = total bar size / current bar pos
-//				// Calculate the maximum offset for scrolling
-//				int maxOffset = std::max(0, totalHeight - (4 * 45));
-
-//				// Update the cursor position based on scrolling
-//				if (cursorPos < 0) {
-//					cursorPos = 0;
-//				}
-//				if (cursorPos > maxOffset) {
-//					cursorPos = maxOffset;
-//				}
-//				scrollOffset = cursorPos;
-//			}
-//		}
-//		if (IsMouseButtonPressed(MOUSE_LEFT_BUTTON)) {
-//			Vector2 mouse_pos = GetMousePosition();
-//			Rectangle rec = {0, 0, 40, 40};
-
-//			if (item_is_up == false) {
-//				int i = 0;
-//				int y = 0;
-//				int startIdx = scrollOffset * 8;
-//				while (i < 5 && startIdx + y + (i * 8) < inventory.size()) {
-//					if (IsMouseInBound(rec, {static_cast<float>(110 + y * 45), static_cast<float>(130 + i * 45)}, mouse_pos)) {
-//						ItemUp.id = inventory.at(i * 5 + y * 8).id;
-//						ItemUp.stack_size = inventory.at(i * 5 + y * 8).stack_size;
-//						item_is_up = true;
-//						//inventory.erase(inventory.begin() + i + y);
-//						return;
-//					}
-//					y++;
-//					if (y >= 8) {
-//						i++;
-//						y = 0;
-//					}
-//				}
-//			} else {
-//				item_is_up = false;
-//				//inventory.erase(inventory.begin() + ItemUp.index);
-//				//ItemUp.index = inventory.size();
-//				//inventory.push_back(ItemUp);
-//			}
-//		}
-//	}
-
-//	void renderInventory(double delta_time, int height, int width, const std::vector<s_Item>& item_list, const std::vector<Texture2D>& textAtlas) {
-//        Item		item;
-//		int			index;
-
-//		DrawRectangle(100, 100, width - 200, height - 200, ColorAlpha(WHITE, 0.1));
-
-//		// Calculate the total height required for all rows
-//		int totalHeight = (inventory.size() + 7) / 8 * 45;
-//		// Calculate the maximum offset for scrolling
-//		int maxOffset = std::max(0, totalHeight - (5 * 45));
-//		// Calculate the starting index for the items in the current row
-//		int startIdx = scrollOffset * 8;
-//		// Calculate the ending index for the items in the current row
-//		int endIdx = std::min(startIdx + (8 * 5), static_cast<int>(inventory.size()));
-
-//		if (startIdx < inventory.size()) {
-//			for (int i = 0; i < 5; i++) {
-//				DrawText(TextFormat("%i", (startIdx / 8) + i + 1), 100, 130 + i * 45, 10, WHITE);
-//				for (int y = 0; y < 8; y++) {
-//					int index = startIdx + y + (i * 8);
-//					if (index >= endIdx) {
-//						i = 6;
-//						break;
-//					}
-//					DrawRectangle(110 + y * 45, 130 + i * 45, 40, 40, ColorAlpha(GRAY, 0.2));
-//					u32 item_id = inventory[index].id;
-//					u32 stack_size = inventory[index].stack_size;
-//					Item item;
-//					for (int j = 0; j < item_list.size(); j++) {
-//						if (item_list[item_id].id == item_id) {
-//							item = item_list[item_id];
-//							DrawTextureRec(textAtlas[item.text_index], (Rectangle){0, 0, 32, 32}, {static_cast<float>(110 + y * 45 + 4), static_cast<float>(130 + i * 45 + 4)}, WHITE);
-//							DrawText(TextFormat("%i", stack_size), 130 + y * 45, 160 + i * 45, 10, BLACK);
-//							break;
-//						}
-//					}
-//				}
-//			}
-//		}
-//		Rectangle scrollBar = {465, static_cast<float>(130 + cursorPos), 10, static_cast<float>(30)};
-//    	DrawRectangleRec(scrollBar, DARKGRAY);
-//        DrawText("Inventory", 110, 110, 10, WHITE);
-//		if (item_is_up == true) {
-//			for (int j = 0; j < item_list.size(); j++) {
-//        		if (item_list.at(j).id == ItemUp.id) {
-//					Vector2 mouse_pos = GetMousePosition();
-//        	        item = item_list[j];
-//					DrawTextureRec(textAtlas.at(item.text_index), (Rectangle){0, 0, 32, 32}, mouse_pos, WHITE);
-//					DrawText(TextFormat("%i", ItemUp.stack_size), mouse_pos.x + 15, mouse_pos.y + 20, 10, BLACK);
-//        	        break;
-//        	    }
-//        	}
-//		}
-//    }
-
-//	Inventory() {
-//	}
-
-//	~Inventory() {
-
-//	}
-//};
 
 class Player {
 
