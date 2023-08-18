@@ -112,6 +112,7 @@ typedef struct s_entity {
 	std::string		*name;
 	u32				loot_index;
 	u32				text_index;
+	Rectangle		rec;
 	Vector2			pos;
 	Vector2			toPos;
 	Attribut		attribut;
@@ -120,10 +121,8 @@ typedef struct s_entity {
 typedef struct s_spawn_entity{
 	int			radius;
 	Vector2		pos;
-	u32			loot_index;
-	u32			text_index;
-	u32			number_left;
-	Attribut	attribut;
+	u32			number;
+	t_entity	entity;
 }	EntitySpawn;
 
 typedef struct s_Context {
@@ -262,7 +261,7 @@ class Inventory {
 			if (cursorPos > maxOffset) {
 				cursorPos = maxOffset;
 			}
-			scrollOffset = static_cast<int>(((static_cast<float>(cursorPos) / maxOffset) * (store.size() / column)));
+			scrollOffset = static_cast<int>(((static_cast<float>(cursorPos) / maxOffset) * (static_cast<float>(store.size()) / column)));
 		}
 		if (dragWindow == true) {
 			Vector2 new_pos;
@@ -426,31 +425,52 @@ class Entity {
 
 private:
 
-	std::vector<s_entity> element;
+	std::vector<s_entity> elements;
 	std::vector<s_spawn_entity>	spawns;
 
 public:
 
-	void	update(double delta_time) {
-		for (i32 i = 0; i < spawns.size(); i++) {\
-			if (spawns.at(i).number_left == 0) {
+	void	updateSpawn(double delta_time) {
+		for (i32 i = 0; i < spawns.size(); i++) {
+			static int	spwn_idx = 0;
+			if (spawns.at(i).number >= spwn_idx) {
+				elements.push_back(spawns.at(i).entity);
+			}
+			if (spawns.at(i).number == spwn_idx) {
 				spawns.erase(spawns.begin() + i);
 			}
+			spwn_idx++;
 		}
 	}
-	void	add_spawn(EntitySpawn new_spawn) {
+
+	void	updateEntity(double delta_time) {
+
+	}
+
+	void	add(EntitySpawn new_spawn) {
 		spawns.push_back(new_spawn);
 		//element.push_back();
 	}
-	void	loadAllEntity(void) {
 
-	};
-	Entity(void) {
-		loadAllEntity();
-	}
-	~Entity(void) {
+	void	del() {
 
 	}
+
+	void	update(double delta_time, Vector2 player_pos) {
+		for (int i = 0; i < elements.size(); i++) {
+			elements.at(i).toPos = player_pos;
+		}
+	}
+
+	void	render(double delta_time, std::vector<Texture2D> textAtlas) {
+		for (int i = 0; i < elements.size(); i++) {
+			DrawTextureRec(textAtlas.at(elements.at(i).text_index), elements.at(i).rec, elements.at(i).pos, WHITE);
+		}
+	}
+
+	Entity(void) {}
+
+	~Entity(void) {}
 };
 
 #endif

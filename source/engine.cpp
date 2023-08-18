@@ -400,9 +400,9 @@ int	main(void) {
 	SetTextureFilter(ctx.font.texture, TEXTURE_FILTER_TRILINEAR);
 	LoadTextureAtlas();
 	ctx.itemsAtlas = filemgr->loadItemsFromFile("asset/data/items.nhc");
-	for (int i = 0; i < 100; i++) {
-		player->inventory->add(0, 999, ctx.itemsAtlas);
-	}
+	//for (int i = 0; i < 100; i++) {
+	//	player->inventory->add(0, 999, ctx.itemsAtlas);
+	//}
 	player->inventory->init(ctx.height, ctx.width, 100, ctx.height * 0.25);
 	SetTargetFPS(120);
 	while(ctx.state != s_close) {
