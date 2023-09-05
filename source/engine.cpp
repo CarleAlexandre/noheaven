@@ -393,7 +393,6 @@ int	main(void) {
 	ctx.height = 480;
 	ctx.state = s_menu;
 	ctx.inventoryOpen = false;
-	ctx.state = s_menu;
 	SetConfigFlags(FLAG_WINDOW_RESIZABLE);
 	InitWindow(ctx.width, ctx.height, ctx.title);
 	ctx.font = LoadFont("asset/font/SF_Atarian_System.ttf");
@@ -411,21 +410,21 @@ int	main(void) {
 			ctx.width = GetScreenWidth();
 		}
 		double delta_time = GetFrameTime();
-		switch (ctx.state){
-		case (s_menu):
-			MenuStart(delta_time);
-			break;
-		case (s_game):
-			Game(delta_time, player);
-			break;
-		case (s_setting):
-			MenuSetting(delta_time);
-			break;
-		case (s_pause):
-			break;
-		default:
-			ctx.state = s_close;
-			break;
+		switch (ctx.state) {
+			case (s_menu):
+				MenuStart(delta_time);
+				break;
+			case (s_game):
+				Game(delta_time, player);
+				break;
+			case (s_setting):
+				MenuSetting(delta_time);
+				break;
+			case (s_pause):
+				break;
+			default:
+				ctx.state = s_close;
+				break;
 		}
 	}
 	UnloadFont(ctx.font);
@@ -433,3 +432,4 @@ int	main(void) {
 	CloseWindow();
 	return (0);
 }
+
