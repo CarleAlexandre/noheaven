@@ -27,7 +27,7 @@ ifeq ($(OS), Windows_NT)
 LIBS		=	-lraylib -lopengl32 -lgdi32 -lwinmm -lstdc++
 endif
 ifeq ($(shell uname -s), Linux)
-LIBS		=	-lraylib -lGL -lm -lpthread -ldl -lrt -lX11 lstdc++
+LIBS		=	-lraylib -lGL -lm -lpthread -ldl -lrt -lX11 -lstdc++
 endif
 
 $(BUILDDIR)$(NAME)		:	$(OBJ) $(DEPS)
