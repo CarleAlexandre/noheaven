@@ -1,4 +1,5 @@
 #include "engine.hpp"
+#include <raymath.h>
 
 bool IsMouseInBound(Rectangle rec, Vector2 pos, Vector2 mouse_pos) {
 	return (mouse_pos.x >= pos.x && mouse_pos.x <= pos.x + rec.width
@@ -101,3 +102,4 @@ Vector2	worldPosToScreenPos(Vector2 world_pos, Vector2 camera_target, int s_widt
 	screen_pos.y = (world_pos.y - camera_target.y) * zoom + (float)s_height / 2;
 	return (screen_pos);
 }
+

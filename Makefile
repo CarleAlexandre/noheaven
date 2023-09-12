@@ -6,7 +6,7 @@ BUILDDIR	=	build/
 
 CC			=	gcc
 
-CFLAGS		=	-Wall -Wextra -pedantic -std=c++98 -O3 -fsanitize=leak
+CFLAGS		=	-Wall -Wextra -std=c++20 -O3 -fsanitize=leak
 
 OBJ		=	$(SRC:%.cpp=%.o)
 

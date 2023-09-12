@@ -5,10 +5,16 @@
 #  include <C:/mingw64/include/raylib.h>
 #  include <C:/mingw64/include/raymath.h>
 #  include <C:/mingw64/include/rlgl.h>
+#  define RLIGHTS_IMPLEMENTATION
+#  include "rlights.h"
+#  define GLSL_VERSION 330
 # else
 #  include <raylib.h>
 #  include <raymath.h>
 #  include <rlgl.h>
+#  define RLIGHTS_IMPLEMENTATION
+#  include "rlights.h"
+#  define GLSL_VERSION 330
 #  include <cstring>
 # endif
 
@@ -42,6 +48,7 @@ enum state {
 	s_setting = 3,
 	s_pause = 4,
 	s_gameover = 5,
+	s_tree = 6,
 };
 
 enum proffesion {
@@ -114,8 +121,8 @@ typedef struct s_entity {
 	u32				loot_index;
 	u32				text_index;
 	Rectangle		rec;
-	Vector2			pos;
-	Vector2			toPos;
+	Vector3			pos;
+	Vector3			toPos;
 	Attribut		attribut;
 }	t_entity;
 
@@ -136,6 +143,8 @@ typedef struct s_Context {
 	std::vector<i32>		input_buffer;
 	std::vector<FadeTxt>	Fadetxt_list;
 	std::vector<Item>		itemsAtlas;
+	Shader					shader;
+	Image					heightmap;
 }	Context;
 
 bool	IsMouseInBound(Rectangle rec, Vector2 pos, Vector2 mouse_pos);
@@ -384,16 +393,16 @@ public:
 
 	Player(void) {
 		pos = {
-			.x = 60,
-			.y = 60
+			.x = 0,
+			.y = 0
 		};
 		vel = {
 			.x = 0,
 			.y = 0
 		};
 		topos = {
-			.x = 60,
-			.y = 60
+			.x = 0,
+			.y = 0
 		};
 		cam = (Camera2D){
 			.target = {
@@ -406,8 +415,16 @@ public:
 		bound = { 0, 0, 64, 64};
 		attribut = {
 			.speed = 20000.0f,
+			.damage = 0,
 			.life = 1500,
+			.armor = 0,
 			.max_life = 1500,
+			.max_armor = 0,
+			.stamina = 0,
+			.max_speed = 0,
+			.weapon_masteries = 0,
+			.agility = 0,
+			.classes = 0,
 			.life_regen = 12.0f,
 		};
 		origin = { 32, 32};
@@ -432,8 +449,9 @@ private:
 public:
 
 	void	updateSpawn(double delta_time) {
-		for (i32 i = 0; i < spawns.size(); i++) {
-			static int	spwn_idx = 0;
+		(void)delta_time;
+		for (size_t i = 0; i < spawns.size(); i++) {
+			static uint32_t	spwn_idx = 0;
 			if (spawns.at(i).number >= spwn_idx) {
 				elements.push_back(spawns.at(i).entity);
 			}
@@ -445,7 +463,7 @@ public:
 	}
 
 	void	updateEntity(double delta_time) {
-
+		(void)delta_time;
 	}
 
 	void	add(EntitySpawn new_spawn) {
@@ -458,14 +476,17 @@ public:
 	}
 
 	void	update(double delta_time, Vector2 player_pos) {
-		for (int i = 0; i < elements.size(); i++) {
-			elements.at(i).toPos = player_pos;
+		(void)delta_time;
+		for (size_t i = 0; i < elements.size(); i++) {
+			elements.at(i).toPos.x = player_pos.x;
+			elements.at(i).toPos.y = player_pos.y;
 		}
 	}
 
 	void	render(double delta_time, std::vector<Texture2D> textAtlas) {
-		for (int i = 0; i < elements.size(); i++) {
-			DrawTextureRec(textAtlas.at(elements.at(i).text_index), elements.at(i).rec, elements.at(i).pos, WHITE);
+		(void)delta_time;
+		for (size_t i = 0; i < elements.size(); i++) {
+			//DrawTextureRec(textAtlas.at(elements.at(i).text_index), elements.at(i).rec, elements.at(i).pos, WHITE);
 		}
 	}
 
