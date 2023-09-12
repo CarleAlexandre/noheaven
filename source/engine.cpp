@@ -1,7 +1,4 @@
 #include "engine.hpp"
-#include <math.h>
-#include <raylib.h>
-#include <raymath.h>
 
 Context ctx;
 
@@ -462,6 +459,9 @@ void	gameInput3d(Player *player, Light *light) {
 		case (KEY_ESCAPE):
 			ctx.state = s_menu;
 			break;
+		case (KEY_F1):
+			ctx.state = s_debug;
+			break;
 		default:
 			break;
 	}
@@ -618,6 +618,9 @@ int	main(void) {
 				break;
 			case (s_tree):
 				renderTree(delta_time, player, sphere, terrain, water);
+				break;
+			case (s_debug):
+				console();
 				break;
 			default:
 				ctx.state = s_close;

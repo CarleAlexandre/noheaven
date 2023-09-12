@@ -91,8 +91,11 @@ static void UpdateLightValues(Shader shader, Light light);         // Send light
 
 #if defined(RLIGHTS_IMPLEMENTATION)
 
-#include "raylib.h"
-
+# ifdef _WIN64
+#  include <C:/mingw64/include/raylib.h>
+# else
+#  include "raylib.h"
+# endif
 //----------------------------------------------------------------------------------
 // Defines and Macros
 //----------------------------------------------------------------------------------

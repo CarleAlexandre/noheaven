@@ -49,6 +49,7 @@ enum state {
 	s_pause = 4,
 	s_gameover = 5,
 	s_tree = 6,
+	s_debug = 7,
 };
 
 enum proffesion {
@@ -158,6 +159,9 @@ Vector2	worldPosToScreenPos(Vector2 world_pos, Vector2 camera_target, int s_widt
 
 void	addFadingTxt(std::string text, double delay, Color color, int font_size, Vector2 pos, std::vector<s_FadeTxt> *Fadetxt_list);
 void	renderFadingTxt(double delta_time, std::vector<s_FadeTxt> *Fadetxt_list);
+
+int		console();
+
 
 class Loot {
 
