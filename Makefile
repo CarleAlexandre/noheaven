@@ -16,6 +16,7 @@ DEPS = source/engine.hpp
 
 SRC		+=	source/engine.cpp
 SRC		+=	source/math.cpp
+SRC		+=	source/console.cpp
 
 SERVER_SRC	+=	source/server.cpp
 

@@ -565,9 +565,9 @@ int	main(void) {
 	ctx.inventoryOpen = false;
 #ifdef WIN32
 	SetConfigFlags(FLAG_WINDOW_RESIZABLE);
+	SetConfigFlags(FLAG_VSYNC_HINT);
 #endif
 	SetConfigFlags(FLAG_MSAA_4X_HINT);
-	SetConfigFlags(FLAG_VSYNC_HINT);
 	InitWindow(ctx.width, ctx.height, ctx.title);
 	ctx.font = LoadFont("asset/font/SF_Atarian_System.ttf");
 	SetTextureFilter(ctx.font.texture, TEXTURE_FILTER_TRILINEAR);
@@ -577,12 +577,12 @@ int	main(void) {
 
 	Model sphere = LoadModelFromMesh(GenMeshSphere(0.5, 5, 5));
 	Model terrain = LoadModelFromMesh(GenMeshHeightmap(ctx.heightmap, {1, 1, 1}));
-	UnloadImage(ctx.heightmap);
 	Model water = LoadModelFromMesh(GenMeshPlane(100, 100, 1, 1));
+
+	UnloadImage(ctx.heightmap);
 
 	ctx.shader = LoadShader("shader/shader.vs", "shader/shader.fs");
 	ctx.shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(ctx.shader, "viewPos");
-
 	int ambientLoc = GetShaderLocation(ctx.shader, "ambient");
 	float shaderposlocaltmp[4] = { 0.1f, 0.1f, 0.1f, 1.0f };
     SetShaderValue(ctx.shader, ambientLoc, shaderposlocaltmp, SHADER_UNIFORM_VEC4);
@@ -597,7 +597,7 @@ int	main(void) {
 	player->inventory->init(ctx.height, ctx.width, 100, ctx.height * 0.25);
 	ctx.height = GetScreenHeight();
 	ctx.width = GetScreenWidth();
-	//SetTargetFPS(60);
+	SetTargetFPS(30);
 	while(ctx.state != s_close) {
 		if (IsWindowResized() == true) {
 			ctx.height = GetScreenHeight();
