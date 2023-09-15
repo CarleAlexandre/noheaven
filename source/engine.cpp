@@ -1,5 +1,7 @@
 #include "engine.hpp"
 
+#define FRAME_SEC 120
+
 Context ctx;
 
 class FileMgr {
@@ -105,84 +107,6 @@ void	renderFadingTxt(double delta_time, std::vector<s_FadeTxt> *Fadetxt_list) {
 		Fadetxt_list->at(i).alpha = ((Fadetxt_list->at(i).delay - Fadetxt_list->at(i).time) / Fadetxt_list->at(i).delay);
 		DrawText(Fadetxt_list->at(i).fmt.c_str(), Fadetxt_list->at(i).pos.x, Fadetxt_list->at(i).pos.y, Fadetxt_list->at(i).font_size, Fade(Fadetxt_list->at(i).color, Fadetxt_list->at(i).alpha));
 		Fadetxt_list->at(i).time += delta_time;
-	}
-}
-
-void	gameInput(Player *player) {
-	if (IsMouseButtonPressed(MOUSE_RIGHT_BUTTON) || IsMouseButtonDown(MOUSE_RIGHT_BUTTON)) {
-		player->topos = screenPosToWorldPos(GetMousePosition(), player->cam.target, ctx.width, ctx.height, player->cam.zoom);
-		//should move this line after pathfinding find next point and not here
-		player->angle = atan2(player->topos.y - player->pos.y, player->topos.x - player->pos.x) * 180 * Q_rsqrt(PI * PI);
-	}
-	player->cam.zoom += ((float)GetMouseWheelMove() * 0.05f);
-	Vector2 mouse_pos = GetMousePosition();
-	if (IsMouseInBound((Rectangle){0, 0, static_cast<float>(ctx.width), static_cast<float>(ctx.height)}, (Vector2){ 0, 0}, mouse_pos)) {
-		if (mouse_pos.x <= 0) {
-			mouse_pos.x = 1;
-		} else if (mouse_pos.x >= ctx.width) {
-			mouse_pos.x = ctx.width - 1;
-		}
-		if (mouse_pos.y <= 0) {
-			mouse_pos.y = 1;
-		} else if (mouse_pos.y >= ctx.height) {
-			mouse_pos.y = ctx.height - 1;
-		}
-		SetMousePosition(mouse_pos.x, mouse_pos.y);
-	}
-	if (IsMouseInBound((Rectangle){0, 0, static_cast<float>(ctx.width), 20}, (Vector2){ 0, 0}, mouse_pos)) {
-		player->cam.target.y--;
-	}
-	if (IsMouseInBound((Rectangle){0, 0, 20, static_cast<float>(ctx.height)}, (Vector2){ 0, 0}, mouse_pos)) {
-		player->cam.target.x--;
-	}
-	if (IsMouseInBound((Rectangle){0, 0, static_cast<float>(ctx.width), 20}, (Vector2){ 0, static_cast<float>(ctx.height - 20)}, mouse_pos)) {
-		player->cam.target.y++;
-	}
-	if (IsMouseInBound((Rectangle){0, 0, 20, static_cast<float>(ctx.height)}, (Vector2){ static_cast<float>(ctx.width - 20), 0}, mouse_pos)) {
-		player->cam.target.x++;
-	}
-	if (player->cam.zoom > 2.0f) {
-		player->cam.zoom = 2.0f;
-	} else if (player->cam.zoom < 0.7f) {
-		player->cam.zoom = 0.7f;
-	}
-	switch (GetKeyPressed()) {
-		//spellone
-		case (KEY_Q):
-			player->attribut.life -= 100;
-			break;
-		case (KEY_W):
-		//spelltwo
-			break;
-		//spellthree
-		case (KEY_E):
-			break;
-		//spellfour
-		case (KEY_R):
-			break;
-		//interact
-		case (KEY_T):
-			break;
-		//warp or dash or leap
-		case (KEY_F):
-			break;
-		//center camera or jump (jump if iso or 3d game)
-		case (KEY_SPACE):
-			player->cam.target = player->pos;
-			break;
-		//open inventory or close
-		case (KEY_TAB):
-			ctx.inventoryOpen = true;
-			break;
-		//openmenu
-		case (KEY_ESCAPE):
-			ctx.state = s_menu;
-			break;
-		default:
-			break;
-	}
-	if (IsKeyDown(KEY_SPACE)) {
-		player->cam.target = player->pos;
 	}
 }
 
@@ -315,7 +239,6 @@ void	MenuSetting(double delta_time) {
 			case (1):
 				break;
 			case (2):
-				ctx.state = s_tree;
 				break;
 			case (3):
 				ctx.state = s_menu;
@@ -336,40 +259,6 @@ void	MenuSetting(double delta_time) {
 			DrawTextureRec(ctx.textAtlas.at(1), button[k].bound, button[k].pos, WHITE);
 		}
 	}
-	EndDrawing();
-}
-
-void	Game(double delta_time, Player *player) {
-	if (ctx.inventoryOpen == false) {
-		gameInput(player);
-		player->update(delta_time, ctx.input_buffer, &ctx.state, &ctx.Fadetxt_list);
-		//updateEntity(ctx);
-	} else {
-		player->inventory->updateInventory(delta_time, ctx.width, ctx.height);
-		if (IsKeyPressed(KEY_TAB) || IsKeyPressed(KEY_ESCAPE)) {
-			ctx.inventoryOpen = false;
-			player->inventory->resetRender(ctx.height, ctx.width, 100, ctx.height * 0.25);
-		}
-	}
-	BeginDrawing();
-	ClearBackground(BLACK);
-	BeginMode2D(player->cam);
-	//for (int i = 0; i < STAGE_SIZE; i++) {
-	//	DrawTextureRec(ctx->stage[i].text, ctx->stage[i].rec, ctx->stage[i].pos, ctx->stage[i].tint);
-	//}
-	DrawTexturePro(ctx.textAtlas.at(2), player->recsource, player->bound,
-		player->origin, player->angle + 90,WHITE);
-	DrawLine(player->pos.x, player->pos.y,
-		player->topos.x, player->topos.y, RED);
-	renderFadingTxt(delta_time, &ctx.Fadetxt_list);
-	EndMode2D();
-	DrawRectangle(ctx.width * 0.5 - 100, ctx.height - 60, 200, 20, RED);
-	DrawRectangle(ctx.width * 0.5 - 100, ctx.height - 60, player->attribut.life * 200 / player->attribut.max_life, 20, GREEN);
-	DrawText(TextFormat("%i / %i", player->attribut.life, player->attribut.max_life), ctx.width * 0.5 - 50, ctx.height - 60, 20, BLACK);
-	if (ctx.inventoryOpen == true) {
-		player->inventory->renderInventory(delta_time, ctx.itemsAtlas, ctx.textAtlas);
-	}
-	DrawFPS(10, 10);
 	EndDrawing();
 }
 
@@ -420,6 +309,7 @@ Vector3 getTerrainCollision(Camera3D camera, Vector3 terrainNormal, Vector3 terr
 }*/
 
 void	gameInput3d(Player *player, Light *light) {
+	player->cam.position.z += GetMouseWheelMove();
 	switch (GetKeyPressed()) {
 		case (KEY_Q):
 			player->attribut.life -= 100;
@@ -430,10 +320,10 @@ void	gameInput3d(Player *player, Light *light) {
 		case (KEY_S):
 			player->topos.y -= 1.0f;
 			break;
-		case (KEY_A):
+		case (KEY_D):
 			player->topos.x += 1.0f;
 			break;
-		case (KEY_D):
+		case (KEY_A):
 			player->topos.x -= 1.0f;
 			break;
 		case (KEY_E):
@@ -449,7 +339,10 @@ void	gameInput3d(Player *player, Light *light) {
 			break;
 		//center camera or jump (jump if iso or 3d game)
 		case (KEY_SPACE):
-			player->cam.target = player->pos;
+			player->cam.target.x = player->pos.x;
+			player->cam.target.y = player->pos.y;
+			player->cam.position.x = player->pos.x + 2;
+			player->cam.position.y = player->pos.y - 3;
 			break;
 		//open inventory or close
 		case (KEY_TAB):
@@ -468,31 +361,19 @@ void	gameInput3d(Player *player, Light *light) {
 	if (IsKeyDown(KEY_SPACE)) {
 		player->cam.target = player->pos;
 	}
+	if (IsKeyDown(KEY_W))
+		player->topos.y += 1.0f;
+	if (IsKeyDown(KEY_S))
+		player->topos.y -= 1.0f;
+	if (IsKeyDown(KEY_D))
+		player->topos.x += 1.0f;
+	if (IsKeyDown(KEY_A))
+		player->topos.x -= 1.0f;
 }
 
-void	renderTree(double delta_time, Player *player, Model sphere, Model terrain, Model water) {
+void	GameLogic(double delta_time, Player *player) {
 	static Light light = CreateLight(LIGHT_POINT, {10, 10, 15}, Vector3Zero(), WHITE, ctx.shader);
 	static double current_time = 0.0;
-
-	static Camera3D camera = {
-		.position = {
-			.x = 2,
-			.y = -3,
-			.z = 10,
-		},
-		.target = {
-			.x = 0,
-			.y = 0,
-			.z = 0
-		},
-		.up = {
-			.x = 0,
-			.y = 1.0f,
-			.z = 0,
-		},
-		.fovy = 45.0f,
-		.projection = CAMERA_PERSPECTIVE,
-	};
 
 	if (ctx.inventoryOpen == false) {
 		gameInput3d(player, &light);
@@ -505,47 +386,40 @@ void	renderTree(double delta_time, Player *player, Model sphere, Model terrain, 
 			player->inventory->resetRender(ctx.height, ctx.width, 100, ctx.height * 0.25);
 		}
 	}
-
-	current_time += delta_time;
-//	light.position.x = static_cast<float>(sin(current_time) * 2);
-//	light.position.y = static_cast<float>(cos(current_time) * 2);
-	if (IsKeyPressed(KEY_SPACE)) {
-		camera.target.x = player->pos.x;
-		camera.target.y = player->pos.y;
-		camera.position.x = player->pos.x + 2;
-		camera.position.y = player->pos.y - 3;
-	}
-	if (camera.up.x == 360)
-		camera.up.x = 0;
-	float cameraPos[3] = { camera.position.x, camera.position.y, camera.position.z };
-	SetShaderValue(ctx.shader, ctx.shader.locs[SHADER_LOC_VECTOR_VIEW], cameraPos, SHADER_UNIFORM_VEC3);
+	//update shader here
+	SetShaderValue(ctx.shader, ctx.shader.locs[SHADER_LOC_VECTOR_VIEW], &player->cam.position, SHADER_UNIFORM_VEC3);
+	SetShaderValue(ctx.filterShader, ctx.filterShader.locs[SHADER_LOC_VECTOR_VIEW], &player->cam.position, SHADER_UNIFORM_VEC3);
 	UpdateLightValues(ctx.shader, light);
 
+	BeginTextureMode(ctx.fbo);
+		ClearBackground(BLACK);
+		BeginMode3D(player->cam);
+			DrawLine3D({-100, 0, 0}, {100, 0, 0}, RED);
+			DrawLine3D({0, -100, 0}, {0, 100, 0}, GREEN);
+			DrawLine3D({0, 0, -100}, {0, 0, 100}, BLUE);
+			DrawModelEx(player->model, player->pos, Vector3Zero(), 0, Vector3One(), WHITE);
+			for (int i = 0; i < ctx.world.size(); i++) {
+				DrawModelEx(ctx.world.at(i).model, ctx.world.at(i).pos, ctx.world.at(i).rot_axis, ctx.world.at(i).rot_angle,ctx.world.at(i).scale, ctx.world.at(i).tint);
+			}
+		EndMode3D();
+	EndTextureMode();
 	BeginDrawing();
-	ClearBackground(BLACK);
-	BeginMode3D(camera);
-		DrawModel(sphere, { player->pos.x, player->pos.y, 1}, 1, GRAY);
-		DrawModelEx(terrain, {-50, 50, 0}, {1.0f, 0, 0}, 90, {100, 1, 100}, GREEN);
-		DrawModelEx(water, {0, 0, 0.4}, {1.0f, 0, 0}, 90, {1, 1, 1}, Fade(BLUE, 0.6));
-		DrawLine3D({-100, 0, 0}, {100, 0, 0}, RED);
-		DrawLine3D({0, -100, 0}, {0, 100, 0}, GREEN);
-		DrawLine3D({0, 0, -100}, {0, 0, 100}, BLUE);
-		//renderlights
-		if (light.enabled) {
-			DrawSphereEx(light.position, 0.4, 5, 5, YELLOW);
-		} else {
-			DrawSphereWires(light.position, 0.4, 5, 5, YELLOW);
+		ClearBackground(RAYWHITE);
+
+		BeginShaderMode(ctx.filterShader);
+        	DrawTextureRec(ctx.fbo.texture, {0, 0, static_cast<float>(ctx.width), -static_cast<float>(ctx.height)}, {0, 0}, WHITE);
+		EndShaderMode();
+
+		renderFadingTxt(delta_time, &ctx.Fadetxt_list);
+		DrawRectangle(ctx.width * 0.5 - 100, ctx.height - 60, 200, 20, RED);
+		DrawRectangle(ctx.width * 0.5 - 100, ctx.height - 60, player->attribut.life * 200 / player->attribut.max_life, 20, GREEN);
+		DrawText(TextFormat("%.0f / %.0f", player->attribut.life, player->attribut.max_life), ctx.width * 0.5 - 50, ctx.height - 60, 20, BLACK);
+		if (ctx.inventoryOpen == true) {
+			player->inventory->renderInventory(delta_time, ctx.itemsAtlas, ctx.textAtlas);
 		}
-	EndMode3D();
-	renderFadingTxt(delta_time, &ctx.Fadetxt_list);
-	DrawRectangle(ctx.width * 0.5 - 100, ctx.height - 60, 200, 20, RED);
-	DrawRectangle(ctx.width * 0.5 - 100, ctx.height - 60, player->attribut.life * 200 / player->attribut.max_life, 20, GREEN);
-	DrawText(TextFormat("%i / %i", player->attribut.life, player->attribut.max_life), ctx.width * 0.5 - 50, ctx.height - 60, 20, BLACK);
-	if (ctx.inventoryOpen == true) {
-		player->inventory->renderInventory(delta_time, ctx.itemsAtlas, ctx.textAtlas);
-	}
-	DrawText(TextFormat("%0.2f, %0.2f", player->pos.x, player->pos.y), 10, 200, 20, BLACK);
-	DrawFPS(10, 10);
+		DrawText(TextFormat("%0.2f, %0.2f", player->pos.x, player->pos.y), 10, 200, 20, BLACK);
+		DrawText(TextFormat("%0.2f %i", player->attribut.speed * delta_time, FRAME_SEC), 10, 50, 20, WHITE);
+		DrawFPS(10, 10);
 	EndDrawing();
 }
 
@@ -563,33 +437,33 @@ int	main(void) {
 	ctx.height = 480;
 	ctx.state = s_menu;
 	ctx.inventoryOpen = false;
-#ifdef WIN32
-	SetConfigFlags(FLAG_WINDOW_RESIZABLE);
-	SetConfigFlags(FLAG_VSYNC_HINT);
-#endif
 	SetConfigFlags(FLAG_MSAA_4X_HINT);
 	InitWindow(ctx.width, ctx.height, ctx.title);
 	ctx.font = LoadFont("asset/font/SF_Atarian_System.ttf");
 	SetTextureFilter(ctx.font.texture, TEXTURE_FILTER_TRILINEAR);
 	LoadTextureAtlas();
 
-	ctx.heightmap = LoadImage("asset/heightmap.png");
+	Image heightmap = LoadImage("asset/heightmap.png");
 
-	Model sphere = LoadModelFromMesh(GenMeshSphere(0.5, 5, 5));
-	Model terrain = LoadModelFromMesh(GenMeshHeightmap(ctx.heightmap, {1, 1, 1}));
+	Model sphere = LoadModelFromMesh(GenMeshSphere(0.5, 12, 12));
+	Model terrain = LoadModelFromMesh(GenMeshHeightmap(heightmap, {1, 1, 1}));
 	Model water = LoadModelFromMesh(GenMeshPlane(100, 100, 1, 1));
 
-	UnloadImage(ctx.heightmap);
+	UnloadImage(heightmap);
 
 	ctx.shader = LoadShader("shader/shader.vs", "shader/shader.fs");
 	ctx.shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(ctx.shader, "viewPos");
-	int ambientLoc = GetShaderLocation(ctx.shader, "ambient");
 	float shaderposlocaltmp[4] = { 0.1f, 0.1f, 0.1f, 1.0f };
-    SetShaderValue(ctx.shader, ambientLoc, shaderposlocaltmp, SHADER_UNIFORM_VEC4);
+    SetShaderValue(ctx.shader, GetShaderLocation(ctx.shader, "ambient"), shaderposlocaltmp, SHADER_UNIFORM_VEC4);
 
 	sphere.materials[0].shader = ctx.shader;
 	terrain.materials[0].shader = ctx.shader;
+	water.materials[0].shader = ctx.shader;
 	
+	player->model = sphere;
+	ctx.world.push_back({.model = terrain, .rot_angle = 90, .pos = { -50, 50, 0}, .rot_axis = {1.0f, 0, 0}, .scale = {100, 1, 100}, .tint = GREEN});
+	ctx.world.push_back({.model = water, .rot_angle = 90, .pos = {0, 0, 0.2}, .rot_axis = {1.0f, 0, 0}, .scale = Vector3One(), .tint = Fade(BLUE, 0.6)});
+
 	ctx.itemsAtlas = filemgr->loadItemsFromFile("asset/data/items.nhc");
 	//for (int i = 0; i < 100; i++) {
 	//	player->inventory->add(0, 999, ctx.itemsAtlas);
@@ -597,7 +471,14 @@ int	main(void) {
 	player->inventory->init(ctx.height, ctx.width, 100, ctx.height * 0.25);
 	ctx.height = GetScreenHeight();
 	ctx.width = GetScreenWidth();
-	SetTargetFPS(30);
+	SetTargetFPS(120);
+	initConsole();
+
+	ctx.fbo = LoadRenderTexture(ctx.width, ctx.height);
+    SetTextureFilter(ctx.fbo.texture, TEXTURE_FILTER_BILINEAR);
+
+    ctx.filterShader = LoadShader(0, "shader/style_filter.fs");
+
 	while(ctx.state != s_close) {
 		if (IsWindowResized() == true) {
 			ctx.height = GetScreenHeight();
@@ -609,18 +490,15 @@ int	main(void) {
 				MenuStart(delta_time);
 				break;
 			case (s_game):
-				Game(delta_time, player);
+				GameLogic(delta_time, player);
 				break;
 			case (s_setting):
 				MenuSetting(delta_time);
 				break;
 			case (s_pause):
 				break;
-			case (s_tree):
-				renderTree(delta_time, player, sphere, terrain, water);
-				break;
 			case (s_debug):
-				console();
+				console(delta_time);
 				break;
 			default:
 				ctx.state = s_close;
@@ -631,7 +509,10 @@ int	main(void) {
 	UnloadModel(sphere);
 	UnloadModel(terrain);
 	UnloadModel(water);
+	ctx.world.clear();
+	//need to add this method : player->inventory.clear();
 	UnloadShader(ctx.shader);
+	UnloadShader(ctx.filterShader);
 	UnloadTextureAtlas();
 	CloseWindow();
 	return (0);

@@ -1,5 +1,4 @@
 #include "engine.hpp"
-#include <raymath.h>
 
 bool IsMouseInBound(Rectangle rec, Vector2 pos, Vector2 mouse_pos) {
 	return (mouse_pos.x >= pos.x && mouse_pos.x <= pos.x + rec.width
@@ -75,6 +74,27 @@ Vector2	toTravel(struct Vector2 current, struct Vector2 target, float velocity, 
         direction.y *= move_distance;
         current.x += direction.x;
         current.y += direction.y;
+    } else {
+        current = target;
+    }
+    return (current);
+}
+
+Vector3	toTravel3d(struct Vector3 current, struct Vector3 target, float velocity, float delta_time) {
+    struct Vector3 direction = { target.x - current.x, target.y - current.y, target.z - current.z };
+    float distance_to_target = Vector3Distance(current, target);
+    
+    if (sqrt(distance_to_target) > velocity * delta_time) {
+        float move_distance = (velocity * delta_time);//smoothStep
+        direction.x *= Q_rsqrt(distance_to_target);
+        direction.y *= Q_rsqrt(distance_to_target);
+		direction.z *= Q_rsqrt(distance_to_target);
+        direction.x *= move_distance;
+        direction.y *= move_distance;
+		direction.z *= move_distance;
+        current.x += direction.x;
+        current.y += direction.y;
+		current.z += direction.z;
     } else {
         current = target;
     }

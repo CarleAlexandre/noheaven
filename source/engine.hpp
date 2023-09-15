@@ -48,8 +48,7 @@ enum state {
 	s_setting = 3,
 	s_pause = 4,
 	s_gameover = 5,
-	s_tree = 6,
-	s_debug = 7,
+	s_debug = 6,
 };
 
 enum proffesion {
@@ -67,16 +66,16 @@ enum proffesion {
 
 typedef struct s_Attribut {
 	float	speed;
-	int		damage;
-	int		life;
-	int		armor;
-	int		max_life;
-	int		max_armor;
-	int		stamina;
-	int		max_speed;
-	int		weapon_masteries;
-	int		agility;
-	int		classes;
+	float	damage;
+	float	life;
+	float	armor;
+	float	max_life;
+	float	max_armor;
+	float	stamina;
+	float	max_speed;
+	float	weapon_masteries;
+	float	agility;
+	float	classes;
 	float	life_regen;
 }	Attribut;
 
@@ -127,25 +126,36 @@ typedef struct s_entity {
 	Attribut		attribut;
 }	t_entity;
 
-typedef struct s_spawn_entity{
+typedef struct s_spawn_entity {
 	int			radius;
 	Vector2		pos;
 	u32			number;
 	t_entity	entity;
 }	EntitySpawn;
 
+typedef struct s_worldelement {
+	Model	model;
+	float	rot_angle;
+	Vector3	pos;
+	Vector3	rot_axis;
+	Vector3 scale;
+	Color	tint;
+}	t_worldelement;
+
 typedef struct s_Context {
-	const char				*title = "noHeaven";
-	int						width = 720, height = 480;
-	int						state = s_menu;
-	bool					inventoryOpen = false;
-	Font					font;
-	std::vector<Texture>	textAtlas;
-	std::vector<i32>		input_buffer;
-	std::vector<FadeTxt>	Fadetxt_list;
-	std::vector<Item>		itemsAtlas;
-	Shader					shader;
-	Image					heightmap;
+	const char					*title = "noHeaven";
+	int							width = 720, height = 480;
+	int							state = s_menu;
+	bool						inventoryOpen = false;
+	Font						font;
+	std::vector<Texture>		textAtlas;
+	std::vector<i32>			input_buffer;
+	std::vector<FadeTxt>		Fadetxt_list;
+	std::vector<Item>			itemsAtlas;
+	Shader						shader;
+	Shader						filterShader;
+	RenderTexture2D				fbo;
+	std::vector<t_worldelement>	world;
 }	Context;
 
 bool	IsMouseInBound(Rectangle rec, Vector2 pos, Vector2 mouse_pos);
@@ -156,11 +166,13 @@ float	Q_rsqrt( float number);
 Vector2	toTravel(struct Vector2 current, struct Vector2 target, float velocity, float delta_time);
 Vector2	screenPosToWorldPos(Vector2 screen_pos, Vector2 camera_target, int s_width, int s_height, float zoom);
 Vector2	worldPosToScreenPos(Vector2 world_pos, Vector2 camera_target, int s_width, int s_height, float zoom);
+Vector3	toTravel3d(struct Vector3 current, struct Vector3 target, float velocity, float delta_time);
 
 void	addFadingTxt(std::string text, double delay, Color color, int font_size, Vector2 pos, std::vector<s_FadeTxt> *Fadetxt_list);
 void	renderFadingTxt(double delta_time, std::vector<s_FadeTxt> *Fadetxt_list);
 
-int		console();
+int		console(double delta_time);
+void	initConsole(void);
 
 
 class Loot {
@@ -359,25 +371,21 @@ class Player {
 private:
 
 public:
-	Vector2		pos;
-	Camera2D	cam;
+	Vector3		pos;
+	Vector3		vel;
+	Vector3		topos;
+	Camera3D	cam;
 	Attribut	attribut;
-	Vector2		topos;
-	Rectangle	bound;
-	float		angle;
-	Vector2		origin;
-	Rectangle	recsource;
-	Vector2		vel;
+	Vector3		orientation;
 	Inventory	*inventory;
-
+	Model		model;
 
 	void	update(double delta_time, std::vector<i32> input_buffer, int *state, std::vector<s_FadeTxt> *Fadetxt_list) {
-		static double acc_time = 0;
-		if (flDistance(pos, topos) > 0.01f) {
-			pos = toTravel(pos, topos, attribut.speed * delta_time, delta_time);
+		static double	acc_time = 0;
+		
+		if (Vector3Distance(pos, topos) > 0.1f) {
+			pos = toTravel3d(pos, topos, attribut.speed * delta_time, delta_time);
 		}
-		bound.x = pos.x;
-		bound.y = pos.y;
 		if (attribut.life < 0) {
 			attribut.life = 0;
 			*state = s_gameover;
@@ -388,7 +396,7 @@ public:
 		if (acc_time >= 1) {
 			if (attribut.life < attribut.max_life) {
 				attribut.life += attribut.life_regen;
-				addFadingTxt(TextFormat("+%.0f", attribut.life_regen), 0.8f, GREEN, 12, pos, Fadetxt_list);
+				addFadingTxt(TextFormat("+%.0f", attribut.life_regen), 0.8f, GREEN, 12, {.x = pos.x + 1, .y = pos.y + 1}, Fadetxt_list);
 			}
 			acc_time = 0;
 		}
@@ -398,43 +406,52 @@ public:
 	Player(void) {
 		pos = {
 			.x = 0,
-			.y = 0
+			.y = 0,
+			.z = 5,
 		};
 		vel = {
 			.x = 0,
-			.y = 0
+			.y = 0,
+			.z = 5,
 		};
 		topos = {
 			.x = 0,
-			.y = 0
+			.y = 0,
+			.z = 0,
 		};
-		cam = (Camera2D){
-			.target = {
-		 		.x = 60,
-				.y = 60,
+		cam = (Camera3D){
+			.position = {
+				.x = 2,
+				.y = -3,
+				.z = 10,
 			},
-			.rotation = 0,
-			.zoom = 1.0f,
+			.target = {
+				.x = 0,
+				.y = 0,
+				.z = 0
+			},
+			.up = {
+				.x = 0,
+				.y = 1.0f,
+				.z = 0,
+			},
+			.fovy = 45.0f,
+			.projection = CAMERA_PERSPECTIVE,
 		};
-		bound = { 0, 0, 64, 64};
 		attribut = {
-			.speed = 20000.0f,
+			.speed = 100.,
 			.damage = 0,
 			.life = 1500,
 			.armor = 0,
 			.max_life = 1500,
 			.max_armor = 0,
 			.stamina = 0,
-			.max_speed = 0,
+			.max_speed = 200.,
 			.weapon_masteries = 0,
-			.agility = 0,
+			.agility = 1.4f,
 			.classes = 0,
-			.life_regen = 12.0f,
+			.life_regen = 12.,
 		};
-		origin = { 32, 32};
-		recsource = { 0, 0, 64, 64};
-		cam.offset.x = 360;
-		cam.offset.y = 240;
 		inventory = new(Inventory);
 	}
 

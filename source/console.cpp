@@ -1,6 +1,5 @@
 #include "engine.hpp"
-#include <cctype>
-#include <raylib.h>
+#  include <C:/mingw64/include/raylib.h>
 
 # define MAX_CMD 5
 
@@ -92,7 +91,10 @@ int	get_cmd_number(std::string &cmd) {
 	return (0);
 }
 
-
+void	initConsole(void) {
+	dbc.is_enter = false;
+	dbc.stats = none;
+}
 
 int	execute(cmd_t &cmd) {
 	int cmd_number = get_cmd_number(cmd.cmd);
@@ -120,26 +122,29 @@ int	execute(cmd_t &cmd) {
 }
 
 void	renderConsole(double delta_time) {
-	static int	current_index = 0;
-	char		blinker = 0;
-	double		time_accu;
+	static int		current_index = 0;
+	static char		blinker = '_';
+	static double	time_accu = 0;
 	
 	time_accu += delta_time;
-	if (time_accu >= 1) {
-		if (blinker & '_') {
+	if (time_accu >= 0.5) {
+		if (blinker == '_') {
 			blinker = 0;
 		} else {
 			blinker = '_';
 		}
 		time_accu = 0;
 	}
+	if (dbc.lines.size() > 10) {
+		current_index = dbc.lines.size() - 10;
+	}
 	BeginDrawing();
 		DrawRectangle(0, 0, ctx.width, 100, BG);
-		for (int i = 0; i < 5 && i + current_index < dbc.lines.size(); i++) {
-			DrawText(dbc.lines[i + current_index].c_str(), 0, i * 20, 18, FG);
+		for (int i = 0; i < 10 && i + current_index < dbc.lines.size(); i++) {
+			DrawText(dbc.lines[i + current_index].c_str(), 0, i * 10, 10, FG);
 		}
-		DrawRectangle(0, 101, ctx.width, 20, BG);
-		DrawText(TextFormat("%s%c", dbc.current_buffer.c_str(), blinker), 0, 101, 18, FG);
+		DrawRectangle(0, 100, ctx.width, 12, BG);
+		DrawText(TextFormat(":%s%c", dbc.current_buffer.c_str(), blinker), 2, 100, 10, FG);
 	EndDrawing();
 }
 
@@ -148,11 +153,28 @@ int	console(double delta_time) {
 	cmd_t					cmd;
 
 	if (dbc.is_enter == false) {
-		dbc.current_buffer.push_back(GetCharPressed());
-		if (IsKeyPressed(KEY_ENTER))
-			dbc.is_enter = true;
-	}
-	else {
+		int key = GetCharPressed();
+		while (key > 0) {
+			if (key >= 32 && key <= 125) {
+				dbc.current_buffer.push_back((char)key);
+			}
+			key = GetCharPressed();
+		}
+		switch (GetKeyPressed()) {
+			case (KEY_ENTER): {
+				dbc.is_enter = true;
+				break;
+			}
+			case (KEY_ESCAPE): {
+				ctx.state = s_game;
+				break;
+			}
+			case (KEY_BACKSPACE): {
+				dbc.current_buffer.erase(dbc.current_buffer.size() - 1);
+				break;
+			}
+		}
+	} else {
 		if (!dbc.current_buffer.empty()) {
 			dbc.lines.push_back(dbc.current_buffer);
 			lexer(lexer_info);
@@ -160,7 +182,7 @@ int	console(double delta_time) {
 				parser(lexer_info, cmd);
 			}
 			if (dbc.stats != error) {
-				execute(cmd);
+				//execute(cmd);
 			}
 			for (int i = 0; i < dbc.error.size(); i++) {
 				dbc.lines.push_back(dbc.error[i]);
