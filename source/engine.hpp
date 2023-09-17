@@ -133,6 +133,15 @@ typedef struct s_spawn_entity {
 	t_entity	entity;
 }	EntitySpawn;
 
+//to lower the render load, dungeon should be instanciated
+typedef struct s_worldbit {
+	Mesh	mesh;
+	int64_t	matter;
+	Vector3	pos;
+	Vector3 rot_angle;
+	Vector3	rot_axis;
+}	t_worldbit;
+
 typedef struct s_worldelement {
 	Model	model;
 	float	rot_angle;
@@ -365,6 +374,8 @@ class Inventory {
 	Inventory(){}
 	~Inventory(){}
 };
+
+//equipement should have multiplicator and not falt value, it should be multiplicative and not additiv to the player stats, so a lvl 50 common armor is still les op than a lvl 1 legendarie armor
 
 class Player {
 

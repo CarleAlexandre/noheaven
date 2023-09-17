@@ -387,28 +387,36 @@ void	GameLogic(double delta_time, Player *player) {
 		}
 	}
 	//update shader here
-	SetShaderValue(ctx.shader, ctx.shader.locs[SHADER_LOC_VECTOR_VIEW], &player->cam.position, SHADER_UNIFORM_VEC3);
-	SetShaderValue(ctx.filterShader, ctx.filterShader.locs[SHADER_LOC_VECTOR_VIEW], &player->cam.position, SHADER_UNIFORM_VEC3);
-	UpdateLightValues(ctx.shader, light);
+	//SetShaderValue(ctx.shader, ctx.shader.locs[SHADER_LOC_VECTOR_VIEW], &player->cam.position, SHADER_UNIFORM_VEC3);
+	//SetShaderValue(ctx.filterShader, ctx.filterShader.locs[SHADER_LOC_VECTOR_VIEW], &player->cam.position, SHADER_UNIFORM_VEC3);
+	//UpdateLightValues(ctx.shader, light);
 
-	BeginTextureMode(ctx.fbo);
-		ClearBackground(BLACK);
+	//BeginTextureMode(ctx.fbo);
+	//	ClearBackground(BLACK);
+	//	BeginMode3D(player->cam);
+	//		DrawLine3D({-100, 0, 0}, {100, 0, 0}, RED);
+	//		DrawLine3D({0, -100, 0}, {0, 100, 0}, GREEN);
+	//		DrawLine3D({0, 0, -100}, {0, 0, 100}, BLUE);
+	//		//DrawModelEx(player->model, player->pos, Vector3Zero(), 0, Vector3One(), WHITE);
+	//		for (int i = 0; i < ctx.world.size(); i++) {
+	//			DrawModelEx(ctx.world.at(i).model, ctx.world.at(i).pos, ctx.world.at(i).rot_axis, ctx.world.at(i).rot_angle,ctx.world.at(i).scale, ctx.world.at(i).tint);
+	//		}
+	//	EndMode3D();
+	//EndTextureMode();
+	BeginDrawing();
+		ClearBackground(RAYWHITE);
 		BeginMode3D(player->cam);
 			DrawLine3D({-100, 0, 0}, {100, 0, 0}, RED);
 			DrawLine3D({0, -100, 0}, {0, 100, 0}, GREEN);
 			DrawLine3D({0, 0, -100}, {0, 0, 100}, BLUE);
-			DrawModelEx(player->model, player->pos, Vector3Zero(), 0, Vector3One(), WHITE);
+			//DrawModelEx(player->model, player->pos, Vector3Zero(), 0, Vector3One(), WHITE);
 			for (int i = 0; i < ctx.world.size(); i++) {
 				DrawModelEx(ctx.world.at(i).model, ctx.world.at(i).pos, ctx.world.at(i).rot_axis, ctx.world.at(i).rot_angle,ctx.world.at(i).scale, ctx.world.at(i).tint);
 			}
 		EndMode3D();
-	EndTextureMode();
-	BeginDrawing();
-		ClearBackground(RAYWHITE);
-
-		BeginShaderMode(ctx.filterShader);
-        	DrawTextureRec(ctx.fbo.texture, {0, 0, static_cast<float>(ctx.width), -static_cast<float>(ctx.height)}, {0, 0}, WHITE);
-		EndShaderMode();
+		//BeginShaderMode(ctx.filterShader);
+//        	DrawTextureRec(ctx.fbo.texture, {0, 0, static_cast<float>(ctx.width), -static_cast<float>(ctx.height)}, {0, 0}, WHITE);
+		//EndShaderMode();
 
 		renderFadingTxt(delta_time, &ctx.Fadetxt_list);
 		DrawRectangle(ctx.width * 0.5 - 100, ctx.height - 60, 200, 20, RED);
@@ -428,6 +436,18 @@ void	GameLogic(double delta_time, Player *player) {
 
 }*/
 
+static Mesh genMap(Image heightmap, int size) {
+	Mesh mesh = { 0 };
+	int mapx = heightmap.width;
+	int mapz = heightmap.height;
+
+	Color *pixels = LoadImageColors(heightmap);
+
+	mesh.triangleCount = (mapx - 1) * (mapz - 1) * 2;
+	mesh.vertexCount = mesh.triangleCount * 3;
+	return (mesh);
+}
+
 int	main(void) {
 	Player		*player = new (Player);
 	FileMgr		*filemgr = new (FileMgr);
@@ -443,26 +463,28 @@ int	main(void) {
 	SetTextureFilter(ctx.font.texture, TEXTURE_FILTER_TRILINEAR);
 	LoadTextureAtlas();
 
+	
+
 	Image heightmap = LoadImage("asset/heightmap.png");
 
-	Model sphere = LoadModelFromMesh(GenMeshSphere(0.5, 12, 12));
-	Model terrain = LoadModelFromMesh(GenMeshHeightmap(heightmap, {1, 1, 1}));
-	Model water = LoadModelFromMesh(GenMeshPlane(100, 100, 1, 1));
+	Model custom = LoadModelFromMesh(genMap(heightmap, 1));
+	//Model terrain = LoadModelFromMesh(GenMeshHeightmap(heightmap, {1, 1, 1}));
+	//Model water = LoadModelFromMesh(GenMeshPlane(100, 100, 1, 1));
 
 	UnloadImage(heightmap);
 
-	ctx.shader = LoadShader("shader/shader.vs", "shader/shader.fs");
-	ctx.shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(ctx.shader, "viewPos");
-	float shaderposlocaltmp[4] = { 0.1f, 0.1f, 0.1f, 1.0f };
-    SetShaderValue(ctx.shader, GetShaderLocation(ctx.shader, "ambient"), shaderposlocaltmp, SHADER_UNIFORM_VEC4);
+	//ctx.shader = LoadShader("shader/shader.vs", "shader/shader.fs");
+	//ctx.shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(ctx.shader, "viewPos");
+	//float shaderposlocaltmp[4] = { 0.1f, 0.1f, 0.1f, 1.0f };
+    //SetShaderValue(ctx.shader, GetShaderLocation(ctx.shader, "ambient"), shaderposlocaltmp, SHADER_UNIFORM_VEC4);
 
-	sphere.materials[0].shader = ctx.shader;
-	terrain.materials[0].shader = ctx.shader;
-	water.materials[0].shader = ctx.shader;
+	//sphere.materials[0].shader = ctx.shader;
+	//terrain.materials[0].shader = ctx.shader;
+	//water.materials[0].shader = ctx.shader;
 	
-	player->model = sphere;
-	ctx.world.push_back({.model = terrain, .rot_angle = 90, .pos = { -50, 50, 0}, .rot_axis = {1.0f, 0, 0}, .scale = {100, 1, 100}, .tint = GREEN});
-	ctx.world.push_back({.model = water, .rot_angle = 90, .pos = {0, 0, 0.2}, .rot_axis = {1.0f, 0, 0}, .scale = Vector3One(), .tint = Fade(BLUE, 0.6)});
+	//player->model = sphere;
+	//ctx.world.push_back({.model = terrain, .rot_angle = 90, .pos = { -50, 50, 0}, .rot_axis = {1.0f, 0, 0}, .scale = {100, 1, 100}, .tint = GREEN});
+	ctx.world.push_back({.model = custom, .rot_angle = 90, .pos = {0, 0, 0.2}, .rot_axis = {1.0f, 0, 0}, .scale = {5, 5, 5}, .tint = BLACK});
 
 	ctx.itemsAtlas = filemgr->loadItemsFromFile("asset/data/items.nhc");
 	//for (int i = 0; i < 100; i++) {
@@ -474,10 +496,10 @@ int	main(void) {
 	SetTargetFPS(120);
 	initConsole();
 
-	ctx.fbo = LoadRenderTexture(ctx.width, ctx.height);
-    SetTextureFilter(ctx.fbo.texture, TEXTURE_FILTER_BILINEAR);
+	//ctx.fbo = LoadRenderTexture(ctx.width, ctx.height);
+    //SetTextureFilter(ctx.fbo.texture, TEXTURE_FILTER_BILINEAR);
 
-    ctx.filterShader = LoadShader(0, "shader/style_filter.fs");
+    //ctx.filterShader = LoadShader(0, "shader/style_filter.fs");
 
 	while(ctx.state != s_close) {
 		if (IsWindowResized() == true) {
@@ -506,9 +528,9 @@ int	main(void) {
 		}
 	}
 	UnloadFont(ctx.font);
-	UnloadModel(sphere);
-	UnloadModel(terrain);
-	UnloadModel(water);
+	//UnloadModel(sphere);
+	//UnloadModel(terrain);
+	//UnloadModel(water);
 	ctx.world.clear();
 	//need to add this method : player->inventory.clear();
 	UnloadShader(ctx.shader);
