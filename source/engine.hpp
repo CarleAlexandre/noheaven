@@ -205,13 +205,15 @@ public:
 		// Initialize random number generator
 		srand((unsigned int) seed);
 		// Generate loot items
-		for (int i = 0; i < loot_table.size; i++) {
-			roll = (float) rand() / (float)RAND_MAX;
-			for (int j = 0; j < loot_table.size; j++) {
-				cumulative_prob += loot_table.drop_rate[j];
-				if (roll <= cumulative_prob) {
-					loot.push_back(loot_table.item_id[j]);
-					break;
+		for (int i = 0; i < loot_size; i++) {
+			for (u32 i = 0; i < loot_table.size; i++) {
+				roll = (float) rand() / (float)RAND_MAX;
+				for (u32 j = 0; j < loot_table.size; j++) {
+					cumulative_prob += loot_table.drop_rate[j];
+					if (roll <= cumulative_prob) {
+						loot.push_back(loot_table.item_id[j]);
+						break;
+					}
 				}
 			}
 		}
@@ -239,7 +241,8 @@ class Inventory {
 	int								scrollBarSize = 0;
 
 	i32	add(u32 item_id, u32 number, std::vector<s_Item> item_list) {
-		if (store.size() >= capacity) {
+		(void)item_list;
+		if (capacity <= static_cast<int>(store.size())) {
 			//cannot add the items;
 			return (-1);
 		}
@@ -249,7 +252,7 @@ class Inventory {
 		//		return (0);
 		//	}
 		//}
-		store.push_back({item_id, number});
+		store.push_back({item_id, number, (unsigned int)store.size()});
 		return (0);
 	}
 
@@ -282,6 +285,7 @@ class Inventory {
 	}
 
 	void updateInventory(double delta_time, int win_width, int win_height) {
+		(void)delta_time;	
 		static bool		draggingScrollBar = false;
 		static bool		dragWindow = false;
 		static Vector2	old_pos;
@@ -334,14 +338,12 @@ class Inventory {
 
 	void renderInventory(double delta_time, const std::vector<s_Item>& item_list, const std::vector<Texture2D>& textAtlas) {
         Item		item;
-		int			index;
-
-		DrawRectangle(bound.x, bound.y, bound.width, bound.height, ColorAlpha(BG, 0.1));
-
+		(void)delta_time;
 		int startIdx = scrollOffset * column;
 		int endIdx = std::min(startIdx + (row * column), static_cast<int>(store.size()));
 
-		if (startIdx < store.size()) {
+		DrawRectangle(bound.x, bound.y, bound.width, bound.height, ColorAlpha(BG, 0.1));
+		if (startIdx < static_cast<int>(store.size())) {
 			for (int y = 0; y < row; y++) {
 				DrawText(TextFormat("%i", (startIdx / 8) + y + 1), bound.x, bound.y + 20 + y * 45, 10, WHITE);
 				for (int x = 0; x < column; x++) {
@@ -354,7 +356,7 @@ class Inventory {
 					u32 item_id = store[index].id;
 					u32 stack_size = store[index].stack_size;
 					Item item;
-					for (int j = 0; j < item_list.size(); j++) {
+					for (uint32_t j = 0; j < item_list.size(); j++) {
 						if (item_list[item_id].id == item_id) {
 							item = item_list[item_id];
 							DrawTextureRec(textAtlas[item.text_index], (Rectangle){0, 0, 32, 32}, {static_cast<float>(bound.x + 10 + x * 45 + 4), static_cast<float>(bound.y + 20 + y * 45 + 4)}, WHITE);
@@ -393,7 +395,8 @@ public:
 
 	void	update(double delta_time, std::vector<i32> input_buffer, int *state, std::vector<s_FadeTxt> *Fadetxt_list) {
 		static double	acc_time = 0;
-		
+	
+		(void)input_buffer;
 		if (Vector3Distance(pos, topos) > 0.1f) {
 			pos = toTravel3d(pos, topos, attribut.speed * delta_time, delta_time);
 		}
@@ -495,16 +498,23 @@ public:
 	}
 
 	void	updateEntity(double delta_time) {
-		(void)delta_time;
+		for (uint32_t i = 0; i < elements.size(); i++) {
+			if (Vector3Distance(elements[i].pos, elements[i].toPos)) {
+				toTravel3d(elements[i].pos, elements[i].toPos, elements[i].attribut.speed, delta_time);
+			}
+		}
 	}
 
-	void	add(EntitySpawn new_spawn) {
+	void	add_spawn(EntitySpawn new_spawn) {
 		spawns.push_back(new_spawn);
-		//element.push_back();
 	}
 
-	void	del() {
-
+	void	add_elements(t_entity new_entity) {
+		elements.push_back(new_entity);
+	}
+	
+	void	del_element(int pos, int size) {
+		elements.erase(elements.begin() + pos, elements.begin() + pos + size);
 	}
 
 	void	update(double delta_time, Vector2 player_pos) {
@@ -517,6 +527,7 @@ public:
 
 	void	render(double delta_time, std::vector<Texture2D> textAtlas) {
 		(void)delta_time;
+		(void)textAtlas;
 		for (size_t i = 0; i < elements.size(); i++) {
 			//DrawTextureRec(textAtlas.at(elements.at(i).text_index), elements.at(i).rec, elements.at(i).pos, WHITE);
 		}

@@ -1,4 +1,5 @@
 #include "engine.hpp"
+#include <raylib.h>
 
 #define FRAME_SEC 120
 
@@ -99,7 +100,7 @@ void	addFadingTxt(std::string text, double delay, Color color, int font_size, Ve
 void	renderFadingTxt(double delta_time, std::vector<s_FadeTxt> *Fadetxt_list) {
 	if (Fadetxt_list->size() == 0)
 		return;
-	for (i32 i = 0; i < Fadetxt_list->size(); i++) {
+	for (uint32_t i = 0; i < Fadetxt_list->size(); i++) {
 		if (Fadetxt_list->at(i).time >= Fadetxt_list->at(i).delay) {
 			Fadetxt_list->erase(Fadetxt_list->begin() + i);
 			return;
@@ -111,13 +112,14 @@ void	renderFadingTxt(double delta_time, std::vector<s_FadeTxt> *Fadetxt_list) {
 }
 
 void	MenuStart(double delta_time) {
+	(void)delta_time;
 	static bool window_close = false;
 	static Button button[N_BUTTON_STARTUI] = {
 		{
 			.bound = {
 				0, 0, 64, 32
 			},
-			.text = {0},//LoadTexture("./asset/button.png"),
+			.text = {0, 0, 0, 0, 0},//LoadTexture("./asset/button.png"),
 			.pos = { 20, 50},
 			.name = "play",	
 		},
@@ -125,7 +127,7 @@ void	MenuStart(double delta_time) {
 			.bound = {
 				0, 0, 64, 32
 			},
-			.text = {0},//LoadTexture("./asset/button.png"),
+			.text = {0, 0, 0, 0, 0},//LoadTexture("./asset/button.png"),
 			.pos = { 104, 50},
 			.name = "setting",
 		},
@@ -133,7 +135,7 @@ void	MenuStart(double delta_time) {
 			.bound = {
 				0, 0, 64, 32
 			},
-			.text = {0},//LoadTexture("./asset/button.png"),
+			.text = {0, 0, 0, 0, 0},//LoadTexture("./asset/button.png"),
 			.pos = { 188, 50},
 			.name = "leave",
 		}
@@ -172,7 +174,7 @@ void	MenuStart(double delta_time) {
 	BeginDrawing();
 	ClearBackground(FG);
 	//render ui element here
-	for (int k = 0; k < N_BUTTON_STARTUI; k++) {
+	for (uint32_t k = 0; k < N_BUTTON_STARTUI; k++) {
 		DrawTextureRec(ctx.textAtlas.at(0), button[k].bound, button[k].pos, WHITE);
 		DrawTextEx(ctx.font, button[k].name.c_str(), (Vector2){ button[k].pos.x + 10, static_cast<float>(button[k].pos.y + button[k].bound.height * 0.5 - 6)}, 22, 0, FG);
 	}
@@ -190,12 +192,13 @@ void	MenuStart(double delta_time) {
 }
 
 void	MenuSetting(double delta_time) {
+	(void)delta_time;
 	static Button button[N_BUTTON_SETTINGUI] = {
 	{
 		.bound = {
 			0, 0, 64, 32
 		},
-		.text = {0},//LoadTexture("./asset/button.png"),
+		.text = {0, 0, 0, 0, 0},//LoadTexture("./asset/button.png"),
 		.pos = { 64, 50},
 		.name = "Video",	
 		},
@@ -203,7 +206,7 @@ void	MenuSetting(double delta_time) {
 		.bound = {
 			0, 0, 64, 32
 		},
-		.text = {0},//LoadTexture("./asset/button.png"),
+		.text = {0, 0, 0, 0, 0},//LoadTexture("./asset/button.png"),
 		.pos = { 64, 100},
 		.name = "Game",
 		},
@@ -211,7 +214,7 @@ void	MenuSetting(double delta_time) {
 		.bound = {
 			0, 0, 64, 32
 		},
-		.text = {0},//LoadTexture("./asset/button.png"),
+		.text = {0, 0, 0, 0, 0},//LoadTexture("./asset/button.png"),
 		.pos = { 64, 150},
 		.name = "Input",
 		},
@@ -219,7 +222,7 @@ void	MenuSetting(double delta_time) {
 		.bound = {
 			0, 0, 64, 32
 		},
-		.text = {0},//LoadTexture("./asset/button.png"),
+		.text = {0, 0, 0, 0, 0},//LoadTexture("./asset/button.png"),
 		.pos = { 64, 200},
 		.name = "back",
 		}
@@ -250,11 +253,11 @@ void	MenuSetting(double delta_time) {
 	BeginDrawing();
 	ClearBackground(FG);	
 	DrawText("Setting", 20, 20, 30, BG);
-	for (int k = 0; k < N_BUTTON_SETTINGUI; k++) {
+	for (uint32_t k = 0; k < N_BUTTON_SETTINGUI; k++) {
 		DrawTextureRec(ctx.textAtlas.at(0), button[k].bound, button[k].pos, WHITE);
 		DrawTextEx(ctx.font, button[k].name.c_str(), (Vector2){ button[k].pos.x + 10, static_cast<float>(button[k].pos.y + button[k].bound.height * 0.5 - 6)}, 22, 0, FG);
 	}
-	for (int k = 0; k < N_BUTTON_SETTINGUI; k++) {
+	for (uint32_t k = 0; k < N_BUTTON_SETTINGUI; k++) {
 		if (IsMouseInBound(button[k].bound, button[k].pos, mouse_pos)) {		
 			DrawTextureRec(ctx.textAtlas.at(1), button[k].bound, button[k].pos, WHITE);
 		}
@@ -269,7 +272,7 @@ void	LoadTextureAtlas() {
 }
 
 void	UnloadTextureAtlas() {
-	for (int i = 0; i < ctx.textAtlas.size(); i++) {
+	for (uint32_t i = 0; i < ctx.textAtlas.size(); i++) {
 		UnloadTexture(ctx.textAtlas.at(i));
 	}
 }
@@ -373,8 +376,9 @@ void	gameInput3d(Player *player, Light *light) {
 
 void	GameLogic(double delta_time, Player *player) {
 	static Light light = CreateLight(LIGHT_POINT, {10, 10, 15}, Vector3Zero(), WHITE, ctx.shader);
-	static double current_time = 0.0;
+//	static double current_time = 0.0;
 
+//	(void)current_time;
 	if (ctx.inventoryOpen == false) {
 		gameInput3d(player, &light);
 		player->update(delta_time, ctx.input_buffer, &ctx.state, &ctx.Fadetxt_list);
@@ -387,12 +391,24 @@ void	GameLogic(double delta_time, Player *player) {
 		}
 	}
 	//update shader here
-	//SetShaderValue(ctx.shader, ctx.shader.locs[SHADER_LOC_VECTOR_VIEW], &player->cam.position, SHADER_UNIFORM_VEC3);
-	//SetShaderValue(ctx.filterShader, ctx.filterShader.locs[SHADER_LOC_VECTOR_VIEW], &player->cam.position, SHADER_UNIFORM_VEC3);
-	//UpdateLightValues(ctx.shader, light);
+	SetShaderValue(ctx.shader, ctx.shader.locs[SHADER_LOC_VECTOR_VIEW], &player->cam.position, SHADER_UNIFORM_VEC3);
+	SetShaderValue(ctx.filterShader, ctx.filterShader.locs[SHADER_LOC_VECTOR_VIEW], &player->cam.position, SHADER_UNIFORM_VEC3);
+	UpdateLightValues(ctx.shader, light);
 
-	//BeginTextureMode(ctx.fbo);
-	//	ClearBackground(BLACK);
+	BeginTextureMode(ctx.fbo);
+		ClearBackground(BLACK);
+		BeginMode3D(player->cam);
+			DrawLine3D({-100, 0, 0}, {100, 0, 0}, RED);
+			DrawLine3D({0, -100, 0}, {0, 100, 0}, GREEN);
+			DrawLine3D({0, 0, -100}, {0, 0, 100}, BLUE);
+			DrawModelEx(player->model, player->pos, Vector3Zero(), 0, Vector3One(), WHITE);
+			for (uint32_t i = 0; i < ctx.world.size(); i++) {
+				DrawModelEx(ctx.world.at(i).model, ctx.world.at(i).pos, ctx.world.at(i).rot_axis, ctx.world.at(i).rot_angle,ctx.world.at(i).scale, ctx.world.at(i).tint);
+			}
+		EndMode3D();
+	EndTextureMode();
+	BeginDrawing();
+		ClearBackground(RAYWHITE);
 	//	BeginMode3D(player->cam);
 	//		DrawLine3D({-100, 0, 0}, {100, 0, 0}, RED);
 	//		DrawLine3D({0, -100, 0}, {0, 100, 0}, GREEN);
@@ -402,21 +418,9 @@ void	GameLogic(double delta_time, Player *player) {
 	//			DrawModelEx(ctx.world.at(i).model, ctx.world.at(i).pos, ctx.world.at(i).rot_axis, ctx.world.at(i).rot_angle,ctx.world.at(i).scale, ctx.world.at(i).tint);
 	//		}
 	//	EndMode3D();
-	//EndTextureMode();
-	BeginDrawing();
-		ClearBackground(RAYWHITE);
-		BeginMode3D(player->cam);
-			DrawLine3D({-100, 0, 0}, {100, 0, 0}, RED);
-			DrawLine3D({0, -100, 0}, {0, 100, 0}, GREEN);
-			DrawLine3D({0, 0, -100}, {0, 0, 100}, BLUE);
-			//DrawModelEx(player->model, player->pos, Vector3Zero(), 0, Vector3One(), WHITE);
-			for (int i = 0; i < ctx.world.size(); i++) {
-				DrawModelEx(ctx.world.at(i).model, ctx.world.at(i).pos, ctx.world.at(i).rot_axis, ctx.world.at(i).rot_angle,ctx.world.at(i).scale, ctx.world.at(i).tint);
-			}
-		EndMode3D();
-		//BeginShaderMode(ctx.filterShader);
-//        	DrawTextureRec(ctx.fbo.texture, {0, 0, static_cast<float>(ctx.width), -static_cast<float>(ctx.height)}, {0, 0}, WHITE);
-		//EndShaderMode();
+		BeginShaderMode(ctx.filterShader);
+        	DrawTextureRec(ctx.fbo.texture, {0, 0, static_cast<float>(ctx.width), -static_cast<float>(ctx.height)}, {0, 0}, WHITE);
+		EndShaderMode();
 
 		renderFadingTxt(delta_time, &ctx.Fadetxt_list);
 		DrawRectangle(ctx.width * 0.5 - 100, ctx.height - 60, 200, 20, RED);
@@ -436,6 +440,7 @@ void	GameLogic(double delta_time, Player *player) {
 
 }*/
 
+/*
 static Mesh genMap(Image heightmap, int size) {
 	Mesh mesh = { 0 };
 	int mapx = heightmap.width;
@@ -447,6 +452,7 @@ static Mesh genMap(Image heightmap, int size) {
 	mesh.vertexCount = mesh.triangleCount * 3;
 	return (mesh);
 }
+*/
 
 int	main(void) {
 	Player		*player = new (Player);
@@ -463,28 +469,26 @@ int	main(void) {
 	SetTextureFilter(ctx.font.texture, TEXTURE_FILTER_TRILINEAR);
 	LoadTextureAtlas();
 
-	
-
 	Image heightmap = LoadImage("asset/heightmap.png");
 
-	Model custom = LoadModelFromMesh(genMap(heightmap, 1));
-	//Model terrain = LoadModelFromMesh(GenMeshHeightmap(heightmap, {1, 1, 1}));
-	//Model water = LoadModelFromMesh(GenMeshPlane(100, 100, 1, 1));
+	//Model custom = LoadModelFromMesh(genMap(heightmap, 1));
+	Model terrain = LoadModelFromMesh(GenMeshHeightmap(heightmap, {1, 1, 1}));
+	Model water = LoadModelFromMesh(GenMeshPlane(100, 100, 1, 1));
 
 	UnloadImage(heightmap);
 
-	//ctx.shader = LoadShader("shader/shader.vs", "shader/shader.fs");
-	//ctx.shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(ctx.shader, "viewPos");
-	//float shaderposlocaltmp[4] = { 0.1f, 0.1f, 0.1f, 1.0f };
-    //SetShaderValue(ctx.shader, GetShaderLocation(ctx.shader, "ambient"), shaderposlocaltmp, SHADER_UNIFORM_VEC4);
+	ctx.shader = LoadShader("shader/shader.vs", "shader/shader.fs");
+	ctx.shader.locs[SHADER_LOC_VECTOR_VIEW] = GetShaderLocation(ctx.shader, "viewPos");
+	float shaderposlocaltmp[4] = { 0.1f, 0.1f, 0.1f, 1.0f };
+    SetShaderValue(ctx.shader, GetShaderLocation(ctx.shader, "ambient"), shaderposlocaltmp, SHADER_UNIFORM_VEC4);
 
 	//sphere.materials[0].shader = ctx.shader;
-	//terrain.materials[0].shader = ctx.shader;
-	//water.materials[0].shader = ctx.shader;
+	terrain.materials[0].shader = ctx.shader;
+	water.materials[0].shader = ctx.shader;
 	
-	//player->model = sphere;
-	//ctx.world.push_back({.model = terrain, .rot_angle = 90, .pos = { -50, 50, 0}, .rot_axis = {1.0f, 0, 0}, .scale = {100, 1, 100}, .tint = GREEN});
-	ctx.world.push_back({.model = custom, .rot_angle = 90, .pos = {0, 0, 0.2}, .rot_axis = {1.0f, 0, 0}, .scale = {5, 5, 5}, .tint = BLACK});
+	player->model = LoadModel("asset/Tree_01.obj");
+	ctx.world.push_back({.model = terrain, .rot_angle = 90, .pos = { -50, 50, 0}, .rot_axis = {1.0f, 0, 0}, .scale = {100, 1, 100}, .tint = GREEN});
+	ctx.world.push_back({.model = water, .rot_angle = 90, .pos = {0, 0, 0.2}, .rot_axis = {1.0f, 0, 0}, .scale = {1, 1, 1}, .tint = Fade(BLUE, 0.1)});
 
 	ctx.itemsAtlas = filemgr->loadItemsFromFile("asset/data/items.nhc");
 	//for (int i = 0; i < 100; i++) {
@@ -496,10 +500,10 @@ int	main(void) {
 	SetTargetFPS(120);
 	initConsole();
 
-	//ctx.fbo = LoadRenderTexture(ctx.width, ctx.height);
-    //SetTextureFilter(ctx.fbo.texture, TEXTURE_FILTER_BILINEAR);
+	ctx.fbo = LoadRenderTexture(ctx.width, ctx.height);
+    SetTextureFilter(ctx.fbo.texture, TEXTURE_FILTER_BILINEAR);
 
-    //ctx.filterShader = LoadShader(0, "shader/style_filter.fs");
+    ctx.filterShader = LoadShader(0, "shader/style_filter.fs");
 
 	while(ctx.state != s_close) {
 		if (IsWindowResized() == true) {
@@ -528,9 +532,9 @@ int	main(void) {
 		}
 	}
 	UnloadFont(ctx.font);
-	//UnloadModel(sphere);
-	//UnloadModel(terrain);
-	//UnloadModel(water);
+	UnloadModel(player->model);
+	UnloadModel(terrain);
+	UnloadModel(water);
 	ctx.world.clear();
 	//need to add this method : player->inventory.clear();
 	UnloadShader(ctx.shader);

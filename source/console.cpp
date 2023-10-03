@@ -1,14 +1,19 @@
 #include "engine.hpp"
+# ifdef WIN_32
 #  include <C:/mingw64/include/raylib.h>
+# endif
+#include <string.h>
 
-# define MAX_CMD 5
+# define MAX_CMD 6
 
 static const char *cmd_list[MAX_CMD] = {
-	"move\0",
-	"delete\0",
-	"add\0",
-	"give\0",
-	"rotate\0"};
+	"move",
+	"delete",
+	"add",
+	"give",
+	"rotate",
+	"clear"
+};
 
 typedef enum dbc_stats{
 	error = 1,
@@ -53,12 +58,41 @@ typedef struct debug_console {
 t_debug_console	dbc;
 extern Context	ctx;
 
+static const char *struct_type_list[5] = {
+	"world_element",
+	"world_bit",
+	"entity_spawn",
+	"entity",
+	"item"
+};
+
+int	get_arg_dbc_add(const std::string &str) {
+	size_t index = 0;
+
+	while (strncmp(str.c_str(), struct_type_list[index], str.size()) != 0 && index < 5) {
+		index++;
+	}
+	return (index);
+}
+
+void	dbc_add(std::vector<std::string> arg) {
+	//arg 1 should be what i add, arg 2 to n should be what each element of the struct is	
+	switch(get_arg_dbc_add(arg[0].c_str())) {
+		case (1):
+			break;
+		case (2):
+			break;
+		default:
+			break;
+	}
+}
+
 int	character_is_ok(int c) {
 	return ((isalnum(c) || c == '_' || c == ' '));
 }
 
 int	lexer(std::vector<lexer_t> &lexer_info) {
-	int		i = 0;
+	size_t	i = 0;
 	lexer_t	tmp_token;
 	
 	tmp_token.idx = 0;
@@ -70,22 +104,28 @@ int	lexer(std::vector<lexer_t> &lexer_info) {
 			lexer_info.push_back(tmp_token);
 			tmp_token.str.clear();
 			tmp_token.idx++;
-
 		} else {
 			tmp_token.str.push_back(dbc.current_buffer[i]);
 		}
 		i++;
 	}
+	lexer_info.push_back(tmp_token);
 	return (i);
 }
 
-int	parser(std::vector<lexer_t> &lexer_info, cmd_t &cmd) {
+int	parser(std::vector<lexer_t> lexer_info, cmd_t *cmd) {
+	if (!lexer_info.empty()) {
+		cmd->cmd = lexer_info[0].str.c_str();
+		for (size_t i = 1; i < lexer_info.size(); i++) {
+			cmd->arg.push_back(lexer_info[i].str.c_str());
+		}
+	}
 	return (0);
 }
 
 int	get_cmd_number(std::string &cmd) {
-	for (int i = 1; i < MAX_CMD; i++) {
-		if (cmd_list[i] == cmd)
+	for (int i = 1; i <= MAX_CMD; i++) {
+		if (strncmp(cmd_list[i - 1], cmd.c_str(), cmd.length()) == 0 && !cmd.empty())
 			return (i);
 	}
 	return (0);
@@ -96,7 +136,7 @@ void	initConsole(void) {
 	dbc.stats = none;
 }
 
-int	execute(cmd_t &cmd) {
+int	execute(cmd_t cmd) {
 	int cmd_number = get_cmd_number(cmd.cmd);
 	switch (cmd_number) {
 		case (1):
@@ -113,6 +153,12 @@ int	execute(cmd_t &cmd) {
 			break;
 		case (5):
 //			dbc_rotate();
+			break;
+		case (6):
+			if (!dbc.lines.empty()) {
+				dbc.lines.clear();
+				printf("cleared terminal lines buffer\n");
+			}
 			break;
 		default:
 			dbc.error.push_back("Error! unknown Cmd pls enter a valid cmd!");
@@ -140,11 +186,11 @@ void	renderConsole(double delta_time) {
 	}
 	BeginDrawing();
 		DrawRectangle(0, 0, ctx.width, 100, BG);
-		for (int i = 0; i < 10 && i + current_index < dbc.lines.size(); i++) {
+		for (size_t i = 0; i < 10 && i + current_index < dbc.lines.size(); i++) {
 			DrawText(dbc.lines[i + current_index].c_str(), 0, i * 10, 10, FG);
 		}
 		DrawRectangle(0, 100, ctx.width, 12, BG);
-		DrawText(TextFormat(":%s%c", dbc.current_buffer.c_str(), blinker), 2, 100, 10, FG);
+		DrawText(TextFormat(">%s%c", dbc.current_buffer.c_str(), blinker), 2, 100, 10, FG);
 	EndDrawing();
 }
 
@@ -170,7 +216,8 @@ int	console(double delta_time) {
 				break;
 			}
 			case (KEY_BACKSPACE): {
-				dbc.current_buffer.erase(dbc.current_buffer.size() - 1);
+				if (!dbc.current_buffer.empty())
+					dbc.current_buffer.erase(dbc.current_buffer.size() - 1);
 				break;
 			}
 		}
@@ -179,24 +226,25 @@ int	console(double delta_time) {
 			dbc.lines.push_back(dbc.current_buffer);
 			lexer(lexer_info);
 			if (dbc.stats != error) {
-				parser(lexer_info, cmd);
+				parser(lexer_info, &cmd);
 			}
 			if (dbc.stats != error) {
-				//execute(cmd);
+				execute(cmd);
 			}
-			for (int i = 0; i < dbc.error.size(); i++) {
+			for (size_t i = 0; i < dbc.error.size(); i++) {
 				dbc.lines.push_back(dbc.error[i]);
 			}
 		}
-		for (int i = 0; i < lexer_info.size(); i++) {
-			lexer_info[i].str.clear();
-		}
-		lexer_info.clear();
-		cmd.cmd.clear();
 		//clear all cmd element here
+//		for (size_t i = 0; i < lexer_info.size(); i++) {
+//			lexer_info[i].str.clear();
+//		}
+//		lexer_info.clear();
+//		cmd.cmd.clear();
 		dbc.error.clear();
 		dbc.current_buffer.clear();
 		dbc.is_enter = false;
+		dbc.stats = none;
 	}
 	renderConsole(delta_time);
 	return (0);

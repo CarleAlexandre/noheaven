@@ -123,7 +123,7 @@ static int lightsCount = 0;    // Current amount of created lights
 // Create a light and get shader locations
 Light CreateLight(int type, Vector3 position, Vector3 target, Color color, Shader shader)
 {
-    Light light = { 0 };
+    Light light = { 0, 0, {0, 0, 0}, {0, 0, 0}, {0, 0, 0, 0}, 0, 0, 0, 0, 0, 0, 0};
 
     if (lightsCount < MAX_LIGHTS)
     {
