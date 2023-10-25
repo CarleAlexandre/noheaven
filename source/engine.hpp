@@ -99,6 +99,7 @@ typedef struct s_FadeTxt {
 typedef struct s_Item {
 	u32			id;
 	u32			text_index;
+	u32			model_index;
 	std::string	name;
 	int			properties;
 }	Item;
@@ -166,6 +167,28 @@ typedef struct s_Context {
 	RenderTexture2D				fbo;
 	std::vector<t_worldelement>	world;
 }	Context;
+
+//need to #define VOXEL_ENGINE to access this part
+
+# ifdef VOXEL_ENGINE
+
+#  define BLOCKSIZE 1
+#  define CHUNK_SIZE 3375//number of block max in a chunk
+#  define CHUNK_WIDTH 15
+#  define CHUNK_HEIGHT 15
+#  define CHUNK_LENGTH 15
+
+typedef struct s_voxel {
+	short	pos; //first two bit is an offsetting bits, then 4 for the x,an offsetting bits, 4 for the y, an offsetting bits and 4 for the z (between)
+	short	element_idx;
+}	t_voxel;
+
+typedef struct s_chunk {
+	t_voxel	*blocks;
+	Vector2	pos;// this is the position of the chunk in the world grid
+}	t_chunk;
+
+#endif
 
 bool	IsMouseInBound(Rectangle rec, Vector2 pos, Vector2 mouse_pos);
 int		gcd(int a, int b);
@@ -392,7 +415,15 @@ public:
 	Vector3		orientation;
 	Inventory	*inventory;
 	Model		model;
+	bool		isAlive;
 
+	void	die() {
+
+	}
+
+	void	live() {
+
+	}
 	void	update(double delta_time, std::vector<i32> input_buffer, int *state, std::vector<s_FadeTxt> *Fadetxt_list) {
 		static double	acc_time = 0;
 	
@@ -536,6 +567,86 @@ public:
 	Entity(void) {}
 
 	~Entity(void) {}
+};
+
+class FileMgr {
+	private:
+
+	public:
+
+	std::string	toString(const char *filepath) {
+		std::string line;
+		std::string ret_val;
+		std::ifstream file(filepath);
+
+		if (!file.is_open()) {
+			std::cout << "Failed to open the file: " << filepath << std::endl;
+		}
+		while (std::getline(file, line)) {
+			ret_val.append(line);
+		}
+		file.close();
+		file.clear();
+		line.clear();
+		return (ret_val);
+	}
+	char	*toData(const char *filepath) {
+		std::string line;
+		std::string	str;
+		int	size = 0;
+		std::ifstream file(filepath);
+
+		if (!file.is_open()) {
+			std::cout << "Failed to open the file: " << filepath << std::endl;
+		}
+		while (std::getline(file, line)) {
+			str.append(line);
+		}
+		file.close();
+		file.clear();
+		line.clear();
+		size = str.size();
+		char *data = static_cast<char *>(malloc(size));
+		memcpy(data, str.c_str(), size);
+		return (data);
+	}
+	void	write(const char *filepath, void *data, const size_t size) {
+		char	*span = static_cast<char *>(data);
+		std::ofstream file(filepath);
+		if (!file.is_open()) {
+			std::cout << "Failed to open the file: " << filepath << std::endl;
+		}
+		for (size_t i = 0; i < size; i++) {
+			file.put(span[i]);
+		}
+		file.close();
+		file.clear();
+	}
+	std::vector<Item> loadItemsFromFile(const char *filename) {
+		std::vector<Item>	items;
+		std::ifstream		file(filename);
+
+		if (!file.is_open()) {
+			std::cout << "Failed to open the file: " << filename << std::endl;
+			return items;
+		}
+		std::string line;
+		while (std::getline(file, line)) {
+			Item item;
+			std::istringstream iss(line);
+			iss >> item.id >> item.text_index >> item.name >> item.properties;
+			if (item.id != items.size())
+				std::cout << "not the correct id\n";
+			items.push_back(item);
+		}
+
+		file.close();
+		return items;
+	}
+	FileMgr() {
+	}
+	~FileMgr() {
+	}
 };
 
 #endif

@@ -1,89 +1,8 @@
 #include "engine.hpp"
-#include <raylib.h>
 
 #define FRAME_SEC 120
 
 Context ctx;
-
-class FileMgr {
-	private:
-
-	public:
-
-	std::string	toString(const char *filepath) {
-		std::string line;
-		std::string ret_val;
-		std::ifstream file(filepath);
-
-		if (!file.is_open()) {
-			std::cout << "Failed to open the file: " << filepath << std::endl;
-		}
-		while (std::getline(file, line)) {
-			ret_val.append(line);
-		}
-		file.close();
-		file.clear();
-		line.clear();
-		return (ret_val);
-	}
-	char	*toData(const char *filepath) {
-		std::string line;
-		std::string	str;
-		int	size = 0;
-		std::ifstream file(filepath);
-
-		if (!file.is_open()) {
-			std::cout << "Failed to open the file: " << filepath << std::endl;
-		}
-		while (std::getline(file, line)) {
-			str.append(line);
-		}
-		file.close();
-		file.clear();
-		line.clear();
-		size = str.size();
-		char *data = static_cast<char *>(malloc(size));
-		memcpy(data, str.c_str(), size);
-		return (data);
-	}
-	void	write(const char *filepath, void *data, const size_t size) {
-		char	*span = static_cast<char *>(data);
-		std::ofstream file(filepath);
-		if (!file.is_open()) {
-			std::cout << "Failed to open the file: " << filepath << std::endl;
-		}
-		for (size_t i = 0; i < size; i++) {
-			file.put(span[i]);
-		}
-		file.close();
-		file.clear();
-	}
-	std::vector<Item> loadItemsFromFile(const char *filename) {
-		std::vector<Item>	items;
-		std::ifstream		file(filename);
-
-		if (!file.is_open()) {
-			std::cout << "Failed to open the file: " << filename << std::endl;
-			return items;
-		}
-		std::string line;
-		while (std::getline(file, line)) {
-			Item item;
-			std::istringstream iss(line);
-			iss >> item.id >> item.text_index >> item.name >> item.properties;
-			if (item.id != items.size())
-				std::cout << "not the correct id\n";
-			items.push_back(item);
-		}
-
-		file.close();
-		return items;
-	}
-	FileMgr() {
-	}
-	~FileMgr() {
-	}
-};
 
 void	addFadingTxt(std::string text, double delay, Color color, int font_size, Vector2 pos, std::vector<s_FadeTxt> *Fadetxt_list) {
 	Fadetxt_list->push_back(s_FadeTxt{
@@ -277,40 +196,6 @@ void	UnloadTextureAtlas() {
 	}
 }
 
-// Function to convert screen coordinates to a 3D ray
-/*Ray ScreenToRay(Camera3D camera, Vector2 screenPoint) {
-	Matrix view = GetCameraMatrix(camera);
-	Matrix projection = CAMERA_PERSPECTIVE;
-	// Calculate the screen space point in normalized device coordinates (NDC)
-	Vector3 rayStartNDC = { 2.0f * (screenPoint.x / GetScreenWidth()) - 1.0f, 1.0f - 2.0f * (screenPoint.y / GetScreenHeight()), -1.0f };
-	// Calculate the ray direction in world space
-	Vector3 rayEndNDC = { rayStartNDC.x, rayStartNDC.y, 1.0f };
-	Vector3 rayStartWorld = Vector3Unproject(rayStartNDC, camera.position,
-	camera.target, camera.up);
-	Vector3 rayEndWorld = Vector3Unproject(rayEndNDC, camera.position,
-	camera.target, camera.up);
-	Vector3 rayDirectionWorld = Vector3Normalize(Vector3Subtract(rayEndWorld,
-	rayStartWorld));
-	Ray ray = { rayStartWorld, rayDirectionWorld };
-	return ray;
-}
-
-Vector3 getTerrainCollision(Camera3D camera, Vector3 terrainNormal, Vector3 terrainOrigin) {
-	Vector3	terrainCollision;
-	bool	result = false;
-
-	Vector3 MulMat = camera.up;
-
-	Vector3 ray = Vector3Subtract(camera.target, camera.position);
-	ray = Vector3Normalize(ray);
-	ray = Vector3Multiply(ray, camera.up);
-	while (!result) {
-		terrainCollision =
-	}
-	//need to really know what is the Camera up, target and pos exactly
-	return (terrainCollision);
-}*/
-
 void	gameInput3d(Player *player, Light *light) {
 	player->cam.position.z += GetMouseWheelMove();
 	switch (GetKeyPressed()) {
@@ -390,6 +275,7 @@ void	GameLogic(double delta_time, Player *player) {
 			player->inventory->resetRender(ctx.height, ctx.width, 100, ctx.height * 0.25);
 		}
 	}
+
 	//update shader here
 	SetShaderValue(ctx.shader, ctx.shader.locs[SHADER_LOC_VECTOR_VIEW], &player->cam.position, SHADER_UNIFORM_VEC3);
 	SetShaderValue(ctx.filterShader, ctx.filterShader.locs[SHADER_LOC_VECTOR_VIEW], &player->cam.position, SHADER_UNIFORM_VEC3);
@@ -407,17 +293,9 @@ void	GameLogic(double delta_time, Player *player) {
 			}
 		EndMode3D();
 	EndTextureMode();
+
 	BeginDrawing();
 		ClearBackground(RAYWHITE);
-	//	BeginMode3D(player->cam);
-	//		DrawLine3D({-100, 0, 0}, {100, 0, 0}, RED);
-	//		DrawLine3D({0, -100, 0}, {0, 100, 0}, GREEN);
-	//		DrawLine3D({0, 0, -100}, {0, 0, 100}, BLUE);
-	//		//DrawModelEx(player->model, player->pos, Vector3Zero(), 0, Vector3One(), WHITE);
-	//		for (int i = 0; i < ctx.world.size(); i++) {
-	//			DrawModelEx(ctx.world.at(i).model, ctx.world.at(i).pos, ctx.world.at(i).rot_axis, ctx.world.at(i).rot_angle,ctx.world.at(i).scale, ctx.world.at(i).tint);
-	//		}
-	//	EndMode3D();
 		BeginShaderMode(ctx.filterShader);
         	DrawTextureRec(ctx.fbo.texture, {0, 0, static_cast<float>(ctx.width), -static_cast<float>(ctx.height)}, {0, 0}, WHITE);
 		EndShaderMode();
@@ -434,25 +312,6 @@ void	GameLogic(double delta_time, Player *player) {
 		DrawFPS(10, 10);
 	EndDrawing();
 }
-
-/*Mesh	LoadTerrainMesh(int level_index, int level_size) {
-	return(GenMeshHeightMap(TextFormat("asset/levels/heightmap%i.jpg", level_index), level_size));
-
-}*/
-
-/*
-static Mesh genMap(Image heightmap, int size) {
-	Mesh mesh = { 0 };
-	int mapx = heightmap.width;
-	int mapz = heightmap.height;
-
-	Color *pixels = LoadImageColors(heightmap);
-
-	mesh.triangleCount = (mapx - 1) * (mapz - 1) * 2;
-	mesh.vertexCount = mesh.triangleCount * 3;
-	return (mesh);
-}
-*/
 
 int	main(void) {
 	Player		*player = new (Player);

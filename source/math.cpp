@@ -123,3 +123,36 @@ Vector2	worldPosToScreenPos(Vector2 world_pos, Vector2 camera_target, int s_widt
 	return (screen_pos);
 }
 
+// Function to convert screen coordinates to a 3D ray
+/*Ray ScreenToRay(Camera3D camera, Vector2 screenPoint) {
+	Matrix view = GetCameraMatrix(camera);
+	Matrix projection = CAMERA_PERSPECTIVE;
+	// Calculate the screen space point in normalized device coordinates (NDC)
+	Vector3 rayStartNDC = { 2.0f * (screenPoint.x / GetScreenWidth()) - 1.0f, 1.0f - 2.0f * (screenPoint.y / GetScreenHeight()), -1.0f };
+	// Calculate the ray direction in world space
+	Vector3 rayEndNDC = { rayStartNDC.x, rayStartNDC.y, 1.0f };
+	Vector3 rayStartWorld = Vector3Unproject(rayStartNDC, camera.position,
+	camera.target, camera.up);
+	Vector3 rayEndWorld = Vector3Unproject(rayEndNDC, camera.position,
+	camera.target, camera.up);
+	Vector3 rayDirectionWorld = Vector3Normalize(Vector3Subtract(rayEndWorld,
+	rayStartWorld));
+	Ray ray = { rayStartWorld, rayDirectionWorld };
+	return ray;
+}
+
+Vector3 getTerrainCollision(Camera3D camera, Vector3 terrainNormal, Vector3 terrainOrigin) {
+	Vector3	terrainCollision;
+	bool	result = false;
+
+	Vector3 MulMat = camera.up;
+
+	Vector3 ray = Vector3Subtract(camera.target, camera.position);
+	ray = Vector3Normalize(ray);
+	ray = Vector3Multiply(ray, camera.up);
+	while (!result) {
+		terrainCollision =
+	}
+	//need to really know what is the Camera up, target and pos exactly
+	return (terrainCollision);
+}*/
